@@ -55,11 +55,13 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
         inputRange: [0, 1],
         outputRange: [-6, 0],
     });
+    const canGoBack = navigation.canGoBack();
+    const isHomeHeader = title === 'Trang chủ';
 
     const submitSearch = () => {
         dispatch(setPitchSearchKeyword(searchValue.trim()));
         setSearchOpen(false);
-        navigation.navigate('Pitches');
+        navigation.navigate('ClientTabs', { screen: 'Pitches' });
     };
 
     return (
@@ -84,9 +86,18 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
                         </Text>
                     </View>
                 ) : (
-                    <View>
-                        <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary }}>Xin chào</Text>
-                        <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary }}>{user?.name ?? 'Bạn'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.xs }}>
+                        {canGoBack ? (
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: SPACING.xs }} activeOpacity={0.7}>
+                                <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        ) : null}
+                        {isHomeHeader ? (
+                            <View>
+                                <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary }}>Xin chào</Text>
+                                <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary }}>{user?.name ?? 'Bạn'}</Text>
+                            </View>
+                        ) : null}
                     </View>
                 )}
 
@@ -108,7 +119,7 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={{ position: 'relative', padding: SPACING.xs }}
-                        onPress={() => navigation.navigate('Notifications')}
+                        onPress={() => navigation.navigate('ClientTabs', { screen: 'Notifications' })}
                         activeOpacity={0.7}
                     >
                         <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
@@ -121,7 +132,7 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
                     <TouchableOpacity style={{ padding: SPACING.xs }} onPress={toggleTheme} activeOpacity={0.7}>
                         <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ padding: SPACING.xs }} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
+                    <TouchableOpacity style={{ padding: SPACING.xs }} onPress={() => navigation.navigate('ClientTabs', { screen: 'Profile' })} activeOpacity={0.7}>
                         <Avatar uri={user?.avatar} name={avatarFallbackName} size={28} />
                     </TouchableOpacity>
                 </View>

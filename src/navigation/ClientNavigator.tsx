@@ -51,6 +51,7 @@ function ClientTabs() {
     const { colors } = useTheme();
     return (
         <Tab.Navigator
+            backBehavior="history"
             screenOptions={({ route }) => ({
                 headerShown: true,
                 header: (props) => <TabHeader {...props} />,
