@@ -6,6 +6,7 @@ import { ReqLoginDTO } from '@/types/auth.types';
 export function useAuth() {
     const dispatch = useAppDispatch();
     const { user, isAuthenticated, isLoading, error } = useAppSelector((s) => s.auth);
+    const account = useAppSelector((s) => s.account.account);
 
     const login = useCallback(
         (credentials: ReqLoginDTO) => dispatch(loginAsync(credentials)),
@@ -16,7 +17,15 @@ export function useAuth() {
 
     const dismissError = useCallback(() => dispatch(clearError()), [dispatch]);
 
-    const isAdmin = user ? false : false; // Extend: check roles from fetchAccount
+    const currentUser = account
+        ? {
+            id: user?.id ?? account.id,
+            email: account.email,
+            name: account.name,
+            avatar: account.avatar,
+        }
+        : user;
+    const isAdmin = (account?.roles ?? []).some((role) => role.name === 'ADMIN');
 
-    return { user, isAuthenticated, isLoading, error, login, logout, dismissError, isAdmin };
+    return { user: currentUser, account, isAuthenticated, isLoading, error, login, logout, dismissError, isAdmin };
 }

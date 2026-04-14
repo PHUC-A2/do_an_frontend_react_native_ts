@@ -493,6 +493,7 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
     const [showEndDate, setShowEndDate] = useState(false);
     const [showStartTime, setShowStartTime] = useState(false);
     const [showEndTime, setShowEndTime] = useState(false);
+    const [showTimelineDate, setShowTimelineDate] = useState(false);
 
     const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
@@ -732,6 +733,7 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
 
             <DatePickerModal visible={showStartDate} value={startDate} onConfirm={d => { setStartDate(d); if (d > endDate) setEndDate(d); }} onClose={() => setShowStartDate(false)} colors={colors} />
             <DatePickerModal visible={showEndDate} value={endDate} onConfirm={setEndDate} onClose={() => setShowEndDate(false)} colors={colors} />
+            <DatePickerModal visible={showTimelineDate} value={selectedDate} onConfirm={setSelectedDate} onClose={() => setShowTimelineDate(false)} colors={colors} />
             <TimePickerModal visible={showStartTime} value={startTime} onConfirm={setStartTime} onClose={() => setShowStartTime(false)} colors={colors} />
             <TimePickerModal visible={showEndTime} value={endTime} onConfirm={setEndTime} onClose={() => setShowEndTime(false)} colors={colors} />
 
@@ -747,16 +749,26 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
                 <View style={{ margin: SPACING.md, marginBottom: 0, backgroundColor: colors.surface, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs }}>
                         <Text style={{ fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary }}>Lịch sân</Text>
-                        <Text style={{ fontSize: FONT_SIZE.xs, color: colors.textHint }}>Chỉ xem • 5 phút / ô</Text>
-                    </View>
-
-                    {/* Drum-roll date picker */}
-                    <View style={{ flexDirection: 'row', paddingHorizontal: SPACING.md, paddingBottom: SPACING.xs, alignItems: 'stretch' }}>
-                        <DrumCol items={drumDays} selected={selDay} onSettle={handleDrumDay} flex={1} colors={colors} />
-                        <View style={{ width: 1, backgroundColor: colors.divider, marginVertical: 6 }} />
-                        <DrumCol items={drumMonths} labels={DR_MONTH_LABELS} selected={selMonth} onSettle={handleDrumMonth} flex={1.2} colors={colors} />
-                        <View style={{ width: 1, backgroundColor: colors.divider, marginVertical: 6 }} />
-                        <DrumCol items={drumYears} labels={drumYearLabels} selected={selYear} onSettle={handleDrumYear} flex={1.5} colors={colors} />
+                        <TouchableOpacity
+                            onPress={() => setShowTimelineDate(true)}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: SPACING.xs,
+                                backgroundColor: colors.background,
+                                borderRadius: BORDER_RADIUS.full,
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                paddingVertical: 6,
+                                paddingHorizontal: SPACING.sm,
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                            <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: colors.textPrimary }}>
+                                {formatDateVN(selectedDate)}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.sm, paddingBottom: SPACING.sm, gap: 6 }}>
@@ -768,7 +780,7 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
                                     key={i}
                                     onPress={() => { if (!isPast) setSelectedDate(date); }}
                                     style={{
-                                        minWidth: 44, alignItems: 'center',
+                                        minWidth: 30, alignItems: 'center',
                                         paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
                                         borderRadius: BORDER_RADIUS.md,
                                         backgroundColor: isSelected ? colors.primary : 'transparent',

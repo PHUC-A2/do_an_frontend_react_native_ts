@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
+import accountReducer from './slices/accountSlice';
 import bookingReducer from './slices/bookingSlice';
 import pitchReducer from './slices/pitchSlice';
 import notificationReducer from './slices/notificationSlice';
@@ -7,6 +8,7 @@ import notificationReducer from './slices/notificationSlice';
 export const store = configureStore({
     reducer: {
         auth: authReducer,
+        account: accountReducer,
         booking: bookingReducer,
         pitch: pitchReducer,
         notification: notificationReducer,

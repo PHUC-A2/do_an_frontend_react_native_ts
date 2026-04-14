@@ -14,14 +14,17 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { RootState } from '@redux/store';
 import { fetchPitches } from '@redux/slices/pitchSlice';
 import { fetchUnreadCount } from '@redux/slices/notificationSlice';
+import { useAuth } from '@hooks/useAuth';
 import { ClientStackParamList, ClientTabParamList } from '@navigation/types';
 import { useTheme } from '@config/ThemeContext';
 import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS } from '@config/theme';
 import { ResPitchDTO } from '@/types/pitch.types';
 import { PITCH_TYPE_LABEL, IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
+import Avatar from '@components/common/Avatar';
 
 type Nav = CompositeNavigationProp<
     BottomTabNavigationProp<ClientTabParamList, 'Home'>,
@@ -32,9 +35,10 @@ export default function HomeScreen() {
     const dispatch = useAppDispatch();
     const navigation = useNavigation<Nav>();
     const { colors, isDark, toggleTheme } = useTheme();
-    const { user, isAuthenticated } = useAppSelector((s) => s.auth);
-    const { pitches, isLoading } = useAppSelector((s) => s.pitch);
-    const { unreadCount } = useAppSelector((s) => s.notification);
+    const { user, isAuthenticated } = useAuth();
+    const { pitches, isLoading } = useAppSelector((s: RootState) => s.pitch);
+    const { unreadCount } = useAppSelector((s: RootState) => s.notification);
+    const avatarFallbackName = (user?.email?.trim()?.[0] ?? 'G').toUpperCase();
 
     useEffect(() => {
         dispatch(fetchPitches({ page: 1, size: 5 }));
@@ -121,7 +125,7 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                         {/* Account */}
                         <TouchableOpacity style={{ padding: SPACING.xs }} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
-                            <Ionicons name="person-circle-outline" size={28} color={colors.textPrimary} />
+                            <Avatar uri={user?.avatar} name={avatarFallbackName} size={28} />
                         </TouchableOpacity>
                     </View>
                 </View>

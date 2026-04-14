@@ -1,12 +1,14 @@
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabHeaderProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@config/theme';
-import { AdminTabParamList, AdminStackParamList } from './types';
+import { AdminTabParamList, AdminStackParamList, RootStackParamList } from './types';
 import ScreenHeader from '@components/common/ScreenHeader';
 
 // Screens
@@ -37,14 +39,24 @@ function AdminStackHeader({ back, options }: NativeStackHeaderProps) {
 }
 
 function AdminTabHeader({ options }: BottomTabHeaderProps) {
+    const rootNavigation = useNavigation<NavigationProp<RootStackParamList>>();
+
     return (
         <ScreenHeader
             title={options.title ?? ''}
             showBack={false}
             rightAction={
-                typeof options.headerRight === 'function'
-                    ? (options.headerRight({ canGoBack: false }) as React.ReactNode)
-                    : undefined
+                typeof options.headerRight === 'function' ? (
+                    options.headerRight({ canGoBack: false }) as React.ReactNode
+                ) : (
+                    <TouchableOpacity
+                        onPress={() => rootNavigation.navigate('Client')}
+                        style={{ padding: 4 }}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="swap-horizontal-outline" size={20} color={COLORS.primary} />
+                    </TouchableOpacity>
+                )
             }
         />
     );

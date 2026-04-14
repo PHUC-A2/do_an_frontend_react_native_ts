@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '@services/auth.service';
 import { storage } from '@utils/storage';
 import { JwtUserDTO, ReqLoginDTO, ReqRegisterDTO } from '@/types/auth.types';
-import { ResAccountDTO } from '@/types/user.types';
 import { AxiosError } from 'axios';
 
 interface AuthState {
@@ -58,11 +57,6 @@ export const logoutAsync = createAsyncThunk('auth/logout', async () => {
     }
 });
 
-export const fetchAccountAsync = createAsyncThunk('auth/fetchAccount', async () => {
-    const res = await authService.getAccount();
-    return res.data.data as ResAccountDTO;
-});
-
 // ---- Slice ----
 
 const authSlice = createSlice({
@@ -111,16 +105,6 @@ const authSlice = createSlice({
             state.isAuthenticated = false;
         });
 
-        // Fetch account
-        builder.addCase(fetchAccountAsync.fulfilled, (state, action) => {
-            if (state.user) {
-                state.user = {
-                    ...state.user,
-                    name: action.payload.name,
-                    avatar: action.payload.avatar,
-                };
-            }
-        });
     },
 });
 

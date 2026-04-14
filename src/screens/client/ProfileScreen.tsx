@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/useToast';
 type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
 export default function ProfileScreen() {
-    const { user, logout, isAuthenticated } = useAuth();
+    const { user, logout, isAuthenticated, isAdmin } = useAuth();
     const navigation = useNavigation<Nav>();
     const toast = useToast();
     const { colors, isDark, toggleTheme } = useTheme();
@@ -37,6 +37,7 @@ export default function ProfileScreen() {
     };
 
     const MENU_ITEMS = [
+        ...(isAdmin ? [{ icon: 'shield-outline', label: 'Trang quản trị', onPress: () => navigation.getParent()?.navigate('Admin' as never) }] : []),
         { icon: 'person-outline', label: 'Chỉnh sửa hồ sơ', onPress: () => navigation.navigate('EditProfile') },
         { icon: 'calendar-outline', label: 'Lịch sử đặt sân', onPress: () => { } },
         { icon: 'card-outline', label: 'Lịch sử thanh toán', onPress: () => { } },

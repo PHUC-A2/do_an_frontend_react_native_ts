@@ -73,8 +73,8 @@ export default function PitchListScreen() {
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <View style={{ backgroundColor: colors.primaryLight, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginRight: SPACING.sm }}>
-                    <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, fontWeight: FONT_WEIGHT.semibold }}>{pitches.length} sân</Text>
+                <View style={{ backgroundColor: colors.primaryLight, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, marginRight: SPACING.sm, alignItems: 'center', justifyContent: 'center', minWidth: 56, flexShrink: 0 }}>
+                    <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, fontWeight: FONT_WEIGHT.semibold, flexShrink: 0 }}>{pitches.length} sân</Text>
                 </View>
             ),
         });
