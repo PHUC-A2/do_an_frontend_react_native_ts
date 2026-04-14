@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { fetchPitches } from '@redux/slices/pitchSlice';
+import { RootState } from '@redux/store';
 import { ClientStackParamList } from '@navigation/types';
 import PitchCard from '@components/common/PitchCard';
 import SkeletonPitchCard from '@components/common/SkeletonPitchCard';
@@ -28,13 +29,14 @@ export default function PitchListScreen() {
     const dispatch = useAppDispatch();
     const navigation = useNavigation<Nav>();
     const { colors } = useTheme();
-    const { pitches, isLoading, error } = useAppSelector((s) => s.pitch);
+    const { pitches, isLoading, error } = useAppSelector((s: RootState) => s.pitch);
+    const keyword = useAppSelector((s: RootState) => s.pitchSearch.keyword);
 
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        dispatch(fetchPitches({ page: 1, size: 20 }));
-    }, []);
+        dispatch(fetchPitches({ page: 1, size: 20, keyword: keyword.trim() || undefined }));
+    }, [dispatch, keyword]);
 
     useEffect(() => {
         navigation.setOptions({
@@ -48,9 +50,9 @@ export default function PitchListScreen() {
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await dispatch(fetchPitches({ page: 1, size: 20 }));
+        await dispatch(fetchPitches({ page: 1, size: 20, keyword: keyword.trim() || undefined }));
         setRefreshing(false);
-    }, []);
+    }, [dispatch, keyword]);
 
     const renderItem = ({ item, index }: { item: ResPitchDTO; index: number }) => (
         <PitchCard
@@ -91,7 +93,7 @@ export default function PitchListScreen() {
                     borderRadius: BORDER_RADIUS.md,
                     minHeight: 44,
                 }}
-                onPress={() => dispatch(fetchPitches({ page: 1, size: 20 }))}
+                onPress={() => dispatch(fetchPitches({ page: 1, size: 20, keyword: keyword.trim() || undefined }))}
                 activeOpacity={0.85}
             >
                 <Ionicons name="refresh-outline" size={18} color="#fff" />

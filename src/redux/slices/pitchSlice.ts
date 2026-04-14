@@ -23,7 +23,7 @@ const initialState: PitchState = {
 
 export const fetchPitches = createAsyncThunk(
     'pitch/fetchAll',
-    async (params: { page?: number; size?: number; type?: string } | undefined, { rejectWithValue }) => {
+    async (params: { page?: number; size?: number; type?: string; keyword?: string } | undefined, { rejectWithValue }) => {
         try {
             const res = await pitchService.getPitches(params);
             return res.data.data!;

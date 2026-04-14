@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Animated, Easing } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Animated, Easing, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,8 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { setPitchSearchKeyword } from '@redux/slices/pitchSearchSlice';
 import { FONT_SIZE, FONT_WEIGHT, SPACING } from '@config/theme';
 import Avatar from '@components/common/Avatar';
+import { pitchService } from '@services/pitch.service';
+import { ResPitchDTO } from '@/types/pitch.types';
 
 interface ClientTopHeaderProps {
     title: string;
@@ -27,8 +29,11 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchValue, setSearchValue] = useState(globalKeyword);
     const [searchFocused, setSearchFocused] = useState(false);
+    const [suggestions, setSuggestions] = useState<ResPitchDTO[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const searchExpandAnim = useRef(new Animated.Value(0)).current;
     const searchInputRef = useRef<TextInput>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setSearchValue(globalKeyword);
@@ -63,6 +68,35 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
         setSearchOpen(false);
         navigation.navigate('ClientTabs', { screen: 'Pitches' });
     };
+
+    useEffect(() => {
+        if (!searchOpen) {
+            setSuggestions([]);
+            setLoadingSuggestions(false);
+            return;
+        }
+        const keyword = searchValue.trim();
+        if (!keyword) {
+            setSuggestions([]);
+            setLoadingSuggestions(false);
+            return;
+        }
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(async () => {
+            setLoadingSuggestions(true);
+            try {
+                const res = await pitchService.getPitches({ page: 1, size: 6, keyword });
+                setSuggestions(res.data.data?.result ?? []);
+            } catch {
+                setSuggestions([]);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        }, 300);
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, [searchOpen, searchValue]);
 
     return (
         <View
@@ -192,6 +226,63 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
                     </TouchableOpacity>
                 </View>
             </Animated.View>
+            {searchOpen && (searchFocused || searchValue.trim().length > 0) ? (
+                <View
+                    style={{
+                        marginTop: SPACING.xs,
+                        backgroundColor: colors.surface,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        maxHeight: 220,
+                        overflow: 'hidden',
+                    }}
+                >
+                    {loadingSuggestions ? (
+                        <View style={{ paddingVertical: SPACING.md, alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        </View>
+                    ) : suggestions.length > 0 ? (
+                        <ScrollView keyboardShouldPersistTaps="handled">
+                            {suggestions.map((pitch) => (
+                                <TouchableOpacity
+                                    key={pitch.id}
+                                    style={{
+                                        paddingHorizontal: SPACING.md,
+                                        paddingVertical: SPACING.sm,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: colors.divider,
+                                    }}
+                                    onPress={() => {
+                                        setSearchValue(pitch.name);
+                                        dispatch(setPitchSearchKeyword(pitch.name));
+                                        setSearchOpen(false);
+                                        navigation.navigate('ClientTabs', { screen: 'Pitches' });
+                                    }}
+                                    activeOpacity={0.75}
+                                >
+                                    <Text style={{ fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: colors.textPrimary }} numberOfLines={1}>
+                                        {pitch.name}
+                                    </Text>
+                                    <Text style={{ fontSize: FONT_SIZE.xs, color: colors.textSecondary }} numberOfLines={1}>
+                                        {pitch.address}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <TouchableOpacity
+                            style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}
+                            onPress={submitSearch}
+                            activeOpacity={0.75}
+                        >
+                            <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary }} numberOfLines={1}>
+                                Không có gợi ý, tìm với từ khóa "{searchValue.trim()}"
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            ) : null}
         </View>
     );
 }

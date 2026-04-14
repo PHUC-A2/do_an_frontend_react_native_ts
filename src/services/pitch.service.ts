@@ -8,7 +8,7 @@ import {
 import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
 
 export const pitchService = {
-    getPitches: (params?: PaginationParams & { type?: string; status?: string }) =>
+    getPitches: (params?: PaginationParams & { type?: string; status?: string; keyword?: string }) =>
         api.get<RestResponse<ResultPaginationDTO<ResPitchDTO>>>(ENDPOINTS.PITCHES.PUBLIC, { params }),
 
     getPitchById: (id: number) =>
