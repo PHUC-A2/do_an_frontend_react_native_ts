@@ -22,10 +22,6 @@ export default function ClientBottomDock() {
     return (
         <View
             style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
                 flexDirection: 'row',
                 borderTopWidth: 1,
                 borderTopColor: colors.border,

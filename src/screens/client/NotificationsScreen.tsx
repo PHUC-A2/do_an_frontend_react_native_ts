@@ -63,7 +63,7 @@ export default function NotificationsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.safe} edges={['left', 'right']}>
             <FlatList
                 data={notifications}
                 keyExtractor={(item) => String(item.id)}

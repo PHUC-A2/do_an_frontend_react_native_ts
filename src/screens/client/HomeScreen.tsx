@@ -98,7 +98,7 @@ export default function HomeScreen() {
     );
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Quick Actions */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg }}>

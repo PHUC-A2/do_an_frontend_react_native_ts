@@ -46,7 +46,7 @@ export default function ProfileScreen() {
     ];
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
             <ScrollView>
                 {/* Profile Header */}
                 <View style={{ alignItems: 'center', paddingVertical: SPACING.xxl, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>

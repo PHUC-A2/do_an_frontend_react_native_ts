@@ -75,7 +75,7 @@ export default function MyBookingsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.safe} edges={['left', 'right']}>
             <FlatList
                 data={myBookings}
                 keyExtractor={(item) => String(item.id)}

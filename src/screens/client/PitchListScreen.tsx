@@ -103,7 +103,7 @@ export default function PitchListScreen() {
     );
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
             {/* Content */}
             {isLoading && pitches.length === 0 ? (
                 renderSkeletons()
@@ -116,7 +116,6 @@ export default function PitchListScreen() {
                     renderItem={renderItem}
                     contentContainerStyle={{
                         padding: SPACING.lg,
-                        paddingBottom: SPACING.xxxl,
                         flexGrow: 1,
                     }}
                     initialNumToRender={6}

@@ -26,7 +26,6 @@ import AuthNavigator from './AuthNavigator';
 
 const Tab = createBottomTabNavigator<ClientTabParamList>();
 const Stack = createNativeStackNavigator<ClientStackParamList>();
-const DETAIL_BOTTOM_PADDING = 80;
 
 function StackHeader({ back, options }: NativeStackHeaderProps) {
     return (
@@ -76,7 +75,7 @@ export default function ClientNavigator() {
             <Stack.Screen name="ClientTabs" component={ClientTabs} options={{ headerShown: false }} />
             <Stack.Screen name="PitchDetail" options={{ title: 'Sân bóng' }}>
                 {(props) => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <PitchDetailScreen {...props} />
                         <ClientBottomDock />
                     </View>
@@ -84,7 +83,7 @@ export default function ClientNavigator() {
             </Stack.Screen>
             <Stack.Screen name="BookingTimeline" options={{ title: 'Đặt sân' }}>
                 {(props) => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <BookingTimelineScreen {...props} />
                         <ClientBottomDock />
                     </View>
@@ -92,7 +91,7 @@ export default function ClientNavigator() {
             </Stack.Screen>
             <Stack.Screen name="CreateBooking" options={{ title: 'Xác nhận đặt sân' }}>
                 {(props) => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <CreateBookingScreen {...props} />
                         <ClientBottomDock />
                     </View>
@@ -100,7 +99,7 @@ export default function ClientNavigator() {
             </Stack.Screen>
             <Stack.Screen name="BookingDetail" options={{ title: 'Chi tiết đặt sân' }}>
                 {(props) => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <BookingDetailScreen {...props} />
                         <ClientBottomDock />
                     </View>
@@ -108,7 +107,7 @@ export default function ClientNavigator() {
             </Stack.Screen>
             <Stack.Screen name="PaymentQR" options={{ title: 'Thanh toán QR' }}>
                 {(props) => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <PaymentQRScreen {...props} />
                         <ClientBottomDock />
                     </View>
@@ -116,7 +115,7 @@ export default function ClientNavigator() {
             </Stack.Screen>
             <Stack.Screen name="EditProfile" options={{ title: 'Chỉnh sửa hồ sơ' }}>
                 {() => (
-                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                    <View style={{ flex: 1 }}>
                         <EditProfileScreen />
                         <ClientBottomDock />
                     </View>
