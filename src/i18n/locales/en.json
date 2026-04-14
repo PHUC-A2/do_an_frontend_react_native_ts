@@ -1,0 +1,58 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back",
+    "seeAll": "See all",
+    "empty": "No data"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "verifyEmail": "Verify Email"
+  },
+  "pitch": {
+    "title": "Pitches",
+    "book": "Book now",
+    "noData": "No pitches found",
+    "openTime": "Opening hours",
+    "price": "Price list"
+  },
+  "booking": {
+    "title": "My Bookings",
+    "create": "Book a pitch",
+    "cancel": "Cancel booking",
+    "noData": "No bookings yet",
+    "status": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "CHECKIN": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No show"
+    }
+  },
+  "notification": {
+    "title": "Notifications",
+    "markAll": "Mark all as read",
+    "noData": "No notifications"
+  },
+  "profile": {
+    "title": "Profile",
+    "edit": "Edit profile",
+    "security": "Security",
+    "help": "Help"
+  }
+}

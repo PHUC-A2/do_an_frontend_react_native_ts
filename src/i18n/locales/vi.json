@@ -1,0 +1,58 @@
+{
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Có lỗi xảy ra",
+    "retry": "Thử lại",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "back": "Quay lại",
+    "seeAll": "Xem tất cả",
+    "empty": "Không có dữ liệu"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "register": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "noAccount": "Chưa có tài khoản?",
+    "hasAccount": "Đã có tài khoản?",
+    "verifyEmail": "Xác thực Email"
+  },
+  "pitch": {
+    "title": "Sân bóng",
+    "book": "Đặt sân ngay",
+    "noData": "Không có sân nào",
+    "openTime": "Giờ mở cửa",
+    "price": "Bảng giá"
+  },
+  "booking": {
+    "title": "Lịch sử đặt sân",
+    "create": "Đặt sân",
+    "cancel": "Hủy đặt sân",
+    "noData": "Chưa có lịch đặt nào",
+    "status": {
+      "PENDING": "Chờ xác nhận",
+      "CONFIRMED": "Đã xác nhận",
+      "CHECKIN": "Đang diễn ra",
+      "COMPLETED": "Hoàn thành",
+      "CANCELLED": "Đã hủy",
+      "NO_SHOW": "Vắng mặt"
+    }
+  },
+  "notification": {
+    "title": "Thông báo",
+    "markAll": "Đọc tất cả",
+    "noData": "Không có thông báo"
+  },
+  "profile": {
+    "title": "Cá nhân",
+    "edit": "Chỉnh sửa hồ sơ",
+    "security": "Bảo mật",
+    "help": "Trợ giúp"
+  }
+}
