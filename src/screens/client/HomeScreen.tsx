@@ -57,15 +57,18 @@ export default function HomeScreen() {
         { label: 'Đánh giá', icon: 'star-outline', bg: colors.surfaceVariant, color: colors.accent },
     ], [colors]);
 
-    const renderPitchCard = ({ item }: { item: ResPitchDTO }) => (
+    const renderPitchCard = ({ item, index }: { item: ResPitchDTO; index: number }) => (
         <TouchableOpacity
             style={{
-                width: 200,
+                flex: 1,
                 backgroundColor: colors.surface,
                 borderRadius: BORDER_RADIUS.lg,
                 overflow: 'hidden',
                 borderWidth: 1,
                 borderColor: colors.border,
+                marginBottom: SPACING.md,
+                marginRight: index % 2 === 0 ? SPACING.sm : 0,
+                marginLeft: index % 2 === 1 ? SPACING.sm : 0,
             }}
             onPress={() => navigation.navigate('PitchDetail', { pitchId: item.id })}
             activeOpacity={0.85}
@@ -124,10 +127,9 @@ export default function HomeScreen() {
                         data={pitches}
                         keyExtractor={(item) => String(item.id)}
                         renderItem={renderPitchCard}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingLeft: SPACING.xl }}
-                        ItemSeparatorComponent={() => <View style={{ width: SPACING.md }} />}
+                        numColumns={2}
+                        scrollEnabled={false}
+                        columnWrapperStyle={{ paddingHorizontal: SPACING.xl }}
                     />
                 </View>
             </ScrollView>
