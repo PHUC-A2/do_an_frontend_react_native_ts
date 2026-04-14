@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@config/ThemeContext';
 import { ClientTabParamList, ClientStackParamList } from './types';
 import { useAppSelector } from '@redux/hooks';
-import ScreenHeader from '@components/common/ScreenHeader';
+import ClientTopHeader from '@components/common/ClientTopHeader';
 
 // Screens
 import HomeScreen from '@screens/client/HomeScreen';
@@ -29,28 +29,18 @@ const Stack = createNativeStackNavigator<ClientStackParamList>();
 
 function StackHeader({ back, options }: NativeStackHeaderProps) {
     return (
-        <ScreenHeader
+        <ClientTopHeader
             title={options.title ?? ''}
             showBack={!!back}
-            rightAction={
-                typeof options.headerRight === 'function'
-                    ? (options.headerRight({ canGoBack: !!back }) as React.ReactNode)
-                    : undefined
-            }
         />
     );
 }
 
 function TabHeader({ options }: BottomTabHeaderProps) {
     return (
-        <ScreenHeader
+        <ClientTopHeader
             title={options.title ?? ''}
             showBack={false}
-            rightAction={
-                typeof options.headerRight === 'function'
-                    ? (options.headerRight({ canGoBack: false }) as React.ReactNode)
-                    : undefined
-            }
         />
     );
 }
@@ -85,7 +75,7 @@ function ClientTabs() {
                 },
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Trang chủ', headerShown: false }} />
+            <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Trang chủ' }} />
             <Tab.Screen name="Pitches" component={PitchListScreen} options={{ title: 'Sân bóng' }} />
             <Tab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Đặt sân' }} />
             <Tab.Screen

@@ -101,35 +101,6 @@ export default function HomeScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Header */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.md }}>
-                    <View>
-                        <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary }}>Xin chào</Text>
-                        <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary }}>{user?.name ?? 'Bạn'}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
-                        {/* Notification */}
-                        <TouchableOpacity
-                            style={{ position: 'relative', padding: SPACING.xs }}
-                            onPress={() => navigation.navigate('Notifications')}
-                        >
-                            <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-                            {unreadCount > 0 && (
-                                <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: colors.danger, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        {/* Dark / Light toggle */}
-                        <TouchableOpacity style={{ padding: SPACING.xs }} onPress={toggleTheme} activeOpacity={0.7}>
-                            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={24} color={colors.textPrimary} />
-                        </TouchableOpacity>
-                        {/* Account */}
-                        <TouchableOpacity style={{ padding: SPACING.xs }} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
-                            <Avatar uri={user?.avatar} name={avatarFallbackName} size={28} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
                 {/* Search Bar */}
                 <TouchableOpacity
                     style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: SPACING.xl, marginVertical: SPACING.md, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderWidth: 1, borderColor: colors.border, gap: SPACING.sm }}
