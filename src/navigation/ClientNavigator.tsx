@@ -3,12 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabHeaderProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@config/ThemeContext';
+import { View } from 'react-native';
 import { ClientTabParamList, ClientStackParamList } from './types';
 import { useAppSelector } from '@redux/hooks';
 import ClientTopHeader from '@components/common/ClientTopHeader';
+import ClientBottomTabBar from '@components/common/ClientBottomTabBar';
+import ClientBottomDock from '@components/common/ClientBottomDock';
 
 // Screens
 import HomeScreen from '@screens/client/HomeScreen';
@@ -26,6 +26,7 @@ import AuthNavigator from './AuthNavigator';
 
 const Tab = createBottomTabNavigator<ClientTabParamList>();
 const Stack = createNativeStackNavigator<ClientStackParamList>();
+const DETAIL_BOTTOM_PADDING = 80;
 
 function StackHeader({ back, options }: NativeStackHeaderProps) {
     return (
@@ -47,33 +48,13 @@ function TabHeader({ options }: BottomTabHeaderProps) {
 
 function ClientTabs() {
     const unreadCount = useAppSelector((s) => s.notification.unreadCount);
-    const insets = useSafeAreaInsets();
-    const { colors } = useTheme();
     return (
         <Tab.Navigator
             backBehavior="history"
+            tabBar={(props) => <ClientBottomTabBar {...props} />}
             screenOptions={({ route }) => ({
                 headerShown: true,
                 header: (props) => <TabHeader {...props} />,
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.textHint,
-                tabBarStyle: {
-                    borderTopColor: colors.border,
-                    backgroundColor: colors.surface,
-                    height: 60 + insets.bottom,
-                    paddingBottom: 8 + insets.bottom,
-                },
-                tabBarIcon: ({ focused, color, size }) => {
-                    const icons: Record<string, [string, string]> = {
-                        Home: ['home', 'home-outline'],
-                        Pitches: ['football', 'football-outline'],
-                        MyBookings: ['calendar', 'calendar-outline'],
-                        Notifications: ['notifications', 'notifications-outline'],
-                        Profile: ['person', 'person-outline'],
-                    };
-                    const [active, inactive] = icons[route.name] ?? ['ellipse', 'ellipse-outline'];
-                    return <Ionicons name={(focused ? active : inactive) as any} size={size} color={color} />;
-                },
             })}
         >
             <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Trang chủ' }} />
@@ -93,12 +74,54 @@ export default function ClientNavigator() {
     return (
         <Stack.Navigator screenOptions={{ header: (props) => <StackHeader {...props} /> }}>
             <Stack.Screen name="ClientTabs" component={ClientTabs} options={{ headerShown: false }} />
-            <Stack.Screen name="PitchDetail" component={PitchDetailScreen} options={{ title: 'Sân bóng' }} />
-            <Stack.Screen name="BookingTimeline" component={BookingTimelineScreen} options={{ title: 'Đặt sân' }} />
-            <Stack.Screen name="CreateBooking" component={CreateBookingScreen} options={{ title: 'Xác nhận đặt sân' }} />
-            <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ title: 'Chi tiết đặt sân' }} />
-            <Stack.Screen name="PaymentQR" component={PaymentQRScreen} options={{ title: 'Thanh toán QR' }} />
-            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Chỉnh sửa hồ sơ' }} />
+            <Stack.Screen name="PitchDetail" options={{ title: 'Sân bóng' }}>
+                {(props) => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <PitchDetailScreen {...props} />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
+            <Stack.Screen name="BookingTimeline" options={{ title: 'Đặt sân' }}>
+                {(props) => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <BookingTimelineScreen {...props} />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
+            <Stack.Screen name="CreateBooking" options={{ title: 'Xác nhận đặt sân' }}>
+                {(props) => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <CreateBookingScreen {...props} />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
+            <Stack.Screen name="BookingDetail" options={{ title: 'Chi tiết đặt sân' }}>
+                {(props) => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <BookingDetailScreen {...props} />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
+            <Stack.Screen name="PaymentQR" options={{ title: 'Thanh toán QR' }}>
+                {(props) => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <PaymentQRScreen {...props} />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
+            <Stack.Screen name="EditProfile" options={{ title: 'Chỉnh sửa hồ sơ' }}>
+                {() => (
+                    <View style={{ flex: 1, paddingBottom: DETAIL_BOTTOM_PADDING }}>
+                        <EditProfileScreen />
+                        <ClientBottomDock />
+                    </View>
+                )}
+            </Stack.Screen>
             {/* Auth flow presented as modal */}
             <Stack.Screen
                 name="AuthModal"
