@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import accountReducer from './slices/accountSlice';
 import bookingReducer from './slices/bookingSlice';
 import pitchReducer from './slices/pitchSlice';
+import pitchSearchReducer from './slices/pitchSearchSlice';
 import notificationReducer from './slices/notificationSlice';
 
 export const store = configureStore({
@@ -11,6 +12,7 @@ export const store = configureStore({
         account: accountReducer,
         booking: bookingReducer,
         pitch: pitchReducer,
+        pitchSearch: pitchSearchReducer,
         notification: notificationReducer,
     },
     middleware: (getDefaultMiddleware) =>

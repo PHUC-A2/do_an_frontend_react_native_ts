@@ -1,13 +1,10 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
     View,
     Text,
     FlatList,
     TouchableOpacity,
     RefreshControl,
-    TextInput,
-    Animated,
-    Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -34,37 +31,6 @@ export default function PitchListScreen() {
     const { pitches, isLoading, error } = useAppSelector((s) => s.pitch);
 
     const [refreshing, setRefreshing] = useState(false);
-    const [query, setQuery] = useState('');
-    const [searchFocused, setSearchFocused] = useState(false);
-
-    // Animated border width for search focus
-    const borderAnim = useRef(new Animated.Value(1)).current;
-    const borderColorAnim = useRef(new Animated.Value(0)).current;
-
-    const searchBorderStyle = {
-        borderWidth: borderAnim,
-        borderColor: borderColorAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [colors.border, colors.primary],
-        }),
-    };
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(borderAnim, {
-                toValue: searchFocused ? 2 : 1,
-                duration: 200,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: false,
-            }),
-            Animated.timing(borderColorAnim, {
-                toValue: searchFocused ? 1 : 0,
-                duration: 200,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: false,
-            }),
-        ]).start();
-    }, [searchFocused]);
 
     useEffect(() => {
         dispatch(fetchPitches({ page: 1, size: 20 }));
@@ -85,14 +51,6 @@ export default function PitchListScreen() {
         await dispatch(fetchPitches({ page: 1, size: 20 }));
         setRefreshing(false);
     }, []);
-
-    const filtered: ResPitchDTO[] = query.trim()
-        ? pitches.filter(
-            (p) =>
-                p.name.toLowerCase().includes(query.toLowerCase()) ||
-                p.address.toLowerCase().includes(query.toLowerCase()),
-        )
-        : pitches;
 
     const renderItem = ({ item, index }: { item: ResPitchDTO; index: number }) => (
         <PitchCard
@@ -146,51 +104,6 @@ export default function PitchListScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
-            {/* Search Bar */}
-            <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Animated.View
-                    style={[
-                        {
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: colors.background,
-                            borderRadius: BORDER_RADIUS.full,
-                            paddingHorizontal: SPACING.lg,
-                            paddingVertical: SPACING.sm,
-                            gap: SPACING.sm,
-                        },
-                        searchBorderStyle,
-                    ]}
-                >
-                    <Ionicons
-                        name="search-outline"
-                        size={18}
-                        color={searchFocused ? colors.primary : colors.textHint}
-                    />
-                    <TextInput
-                        style={{
-                            flex: 1,
-                            fontSize: FONT_SIZE.md,
-                            color: colors.textPrimary,
-                            paddingVertical: 0,
-                        }}
-                        placeholder="Tìm kiếm sân..."
-                        placeholderTextColor={colors.textHint}
-                        value={query}
-                        onChangeText={setQuery}
-                        onFocus={() => setSearchFocused(true)}
-                        onBlur={() => setSearchFocused(false)}
-                        returnKeyType="search"
-                        clearButtonMode="while-editing"
-                    />
-                    {query.length > 0 && (
-                        <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Ionicons name="close-circle" size={18} color={colors.textHint} />
-                        </TouchableOpacity>
-                    )}
-                </Animated.View>
-            </View>
-
             {/* Content */}
             {isLoading && pitches.length === 0 ? (
                 renderSkeletons()
@@ -198,7 +111,7 @@ export default function PitchListScreen() {
                 renderError()
             ) : (
                 <FlatList
-                    data={filtered}
+                    data={pitches}
                     keyExtractor={(item) => String(item.id)}
                     renderItem={renderItem}
                     contentContainerStyle={{
@@ -214,8 +127,8 @@ export default function PitchListScreen() {
                     ListEmptyComponent={
                         <EmptyState
                             icon="football-outline"
-                            title={query ? 'Không tìm thấy sân' : 'Không có sân nào'}
-                            subtitle={query ? `Không có kết quả cho "${query}"` : 'Hiện chưa có sân bóng nào'}
+                            title="Không có sân nào"
+                            subtitle="Hiện chưa có sân bóng nào"
                         />
                     }
                     refreshControl={

@@ -100,17 +100,6 @@ export default function HomeScreen() {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                {/* Search Bar */}
-                <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: SPACING.xl, marginVertical: SPACING.md, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderWidth: 1, borderColor: colors.border, gap: SPACING.sm }}
-                    onPress={() => navigation.navigate('Pitches' as any)}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="search-outline" size={18} color={colors.textHint} />
-                    <Text style={{ fontSize: FONT_SIZE.md, color: colors.textHint }}>Tìm sân bóng...</Text>
-                </TouchableOpacity>
-
                 {/* Quick Actions */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg }}>
                     {QUICK_ACTIONS.map((action) => (
