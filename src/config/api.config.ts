@@ -82,4 +82,7 @@ export const ENDPOINTS = {
         MESSENGER: '/admin/system-config/messenger',
         PUBLIC_MESSENGER: '/public/system-config/messenger',
     },
+    AI: {
+        CLIENT_CHAT: '/client/ai/chat',
+    },
 };

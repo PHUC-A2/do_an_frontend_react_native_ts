@@ -9,6 +9,7 @@ import { useAppSelector } from '@redux/hooks';
 import ClientTopHeader from '@components/common/ClientTopHeader';
 import ClientBottomTabBar from '@components/common/ClientBottomTabBar';
 import ClientBottomDock from '@components/common/ClientBottomDock';
+import ClientFloatingChat from '@components/common/ClientFloatingChat';
 
 // Screens
 import HomeScreen from '@screens/client/HomeScreen';
@@ -71,62 +72,65 @@ function ClientTabs() {
 
 export default function ClientNavigator() {
     return (
-        <Stack.Navigator screenOptions={{ header: (props) => <StackHeader {...props} /> }}>
-            <Stack.Screen name="ClientTabs" component={ClientTabs} options={{ headerShown: false }} />
-            <Stack.Screen name="PitchDetail" options={{ title: 'Sân bóng' }}>
-                {(props) => (
-                    <View style={{ flex: 1 }}>
-                        <PitchDetailScreen {...props} />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            <Stack.Screen name="BookingTimeline" options={{ title: 'Đặt sân' }}>
-                {(props) => (
-                    <View style={{ flex: 1 }}>
-                        <BookingTimelineScreen {...props} />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            <Stack.Screen name="CreateBooking" options={{ title: 'Xác nhận đặt sân' }}>
-                {(props) => (
-                    <View style={{ flex: 1 }}>
-                        <CreateBookingScreen {...props} />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            <Stack.Screen name="BookingDetail" options={{ title: 'Chi tiết đặt sân' }}>
-                {(props) => (
-                    <View style={{ flex: 1 }}>
-                        <BookingDetailScreen {...props} />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            <Stack.Screen name="PaymentQR" options={{ title: 'Thanh toán QR' }}>
-                {(props) => (
-                    <View style={{ flex: 1 }}>
-                        <PaymentQRScreen {...props} />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            <Stack.Screen name="EditProfile" options={{ title: 'Chỉnh sửa hồ sơ' }}>
-                {() => (
-                    <View style={{ flex: 1 }}>
-                        <EditProfileScreen />
-                        <ClientBottomDock />
-                    </View>
-                )}
-            </Stack.Screen>
-            {/* Auth flow presented as modal */}
-            <Stack.Screen
-                name="AuthModal"
-                component={AuthNavigator}
-                options={{ presentation: 'modal', headerShown: false }}
-            />
-        </Stack.Navigator>
+        <View style={{ flex: 1 }}>
+            <Stack.Navigator screenOptions={{ header: (props) => <StackHeader {...props} /> }}>
+                <Stack.Screen name="ClientTabs" component={ClientTabs} options={{ headerShown: false }} />
+                <Stack.Screen name="PitchDetail" options={{ title: 'Sân bóng' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <PitchDetailScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="BookingTimeline" options={{ title: 'Đặt sân' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <BookingTimelineScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="CreateBooking" options={{ title: 'Xác nhận đặt sân' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <CreateBookingScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="BookingDetail" options={{ title: 'Chi tiết đặt sân' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <BookingDetailScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="PaymentQR" options={{ title: 'Thanh toán QR' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <PaymentQRScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="EditProfile" options={{ title: 'Chỉnh sửa hồ sơ' }}>
+                    {() => (
+                        <View style={{ flex: 1 }}>
+                            <EditProfileScreen />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                {/* Auth flow presented as modal */}
+                <Stack.Screen
+                    name="AuthModal"
+                    component={AuthNavigator}
+                    options={{ presentation: 'modal', headerShown: false }}
+                />
+            </Stack.Navigator>
+            <ClientFloatingChat />
+        </View>
     );
 }
