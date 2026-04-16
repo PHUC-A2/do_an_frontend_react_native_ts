@@ -80,7 +80,7 @@ export const ENDPOINTS = {
         BANK_ACCOUNT: '/admin/system-config/bank-account',
         PUBLIC_BANK: '/public/system-config/bank-info',
         MESSENGER: '/admin/system-config/messenger',
-        PUBLIC_MESSENGER: '/public/system-config/messenger',
+        PUBLIC_MESSENGER: '/client/public/system-config/messenger',
     },
     AI: {
         CLIENT_CHAT: '/client/ai/chat',

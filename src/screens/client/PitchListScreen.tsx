@@ -1,10 +1,11 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
     View,
     Text,
     FlatList,
     TouchableOpacity,
     RefreshControl,
+    DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import EmptyState from '@components/common/EmptyState';
 import { useTheme } from '@config/ThemeContext';
 import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS } from '@config/theme';
 import { ResPitchDTO } from '@/types/pitch.types';
+import { CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, CLIENT_SCROLL_TO_TOP_EVENT } from '@components/common/chat/chat.constants';
 
 type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
@@ -31,6 +33,9 @@ export default function PitchListScreen() {
     const { colors } = useTheme();
     const { pitches, isLoading, error } = useAppSelector((s: RootState) => s.pitch);
     const keyword = useAppSelector((s: RootState) => s.pitchSearch.keyword);
+    const listRef = useRef<FlatList<ResPitchDTO>>(null);
+    const contentHeightRef = useRef(0);
+    const layoutHeightRef = useRef(0);
 
     const [refreshing, setRefreshing] = useState(false);
 
@@ -53,6 +58,22 @@ export default function PitchListScreen() {
         await dispatch(fetchPitches({ page: 1, size: 20, keyword: keyword.trim() || undefined }));
         setRefreshing(false);
     }, [dispatch, keyword]);
+
+    const updateBackToTopVisibility = (scrollY: number) => {
+        const canScroll = contentHeightRef.current > layoutHeightRef.current + 12;
+        const visible = canScroll && scrollY > 120;
+        DeviceEventEmitter.emit(CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, visible);
+    };
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener(CLIENT_SCROLL_TO_TOP_EVENT, () => {
+            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        });
+        return () => {
+            subscription.remove();
+            DeviceEventEmitter.emit(CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, false);
+        };
+    }, []);
 
     const renderItem = ({ item, index }: { item: ResPitchDTO; index: number }) => (
         <PitchCard
@@ -113,6 +134,7 @@ export default function PitchListScreen() {
                 renderError()
             ) : (
                 <FlatList
+                    ref={listRef}
                     data={pitches}
                     keyExtractor={(item) => String(item.id)}
                     renderItem={renderItem}
@@ -125,6 +147,18 @@ export default function PitchListScreen() {
                     windowSize={10}
                     removeClippedSubviews={true}
                     showsVerticalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    onLayout={(event) => {
+                        layoutHeightRef.current = event.nativeEvent.layout.height;
+                        updateBackToTopVisibility(0);
+                    }}
+                    onContentSizeChange={(_, h) => {
+                        contentHeightRef.current = h;
+                        updateBackToTopVisibility(0);
+                    }}
+                    onScroll={(event) => {
+                        updateBackToTopVisibility(event.nativeEvent.contentOffset.y);
+                    }}
                     ListEmptyComponent={
                         <EmptyState
                             icon="football-outline"

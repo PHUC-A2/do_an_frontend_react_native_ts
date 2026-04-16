@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     FlatList,
     Image,
+    DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -25,6 +26,7 @@ import { ResPitchDTO } from '@/types/pitch.types';
 import { PITCH_TYPE_LABEL, IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
 import Avatar from '@components/common/Avatar';
+import { CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, CLIENT_SCROLL_TO_TOP_EVENT } from '@components/common/chat/chat.constants';
 
 type Nav = CompositeNavigationProp<
     BottomTabNavigationProp<ClientTabParamList, 'Home'>,
@@ -39,6 +41,15 @@ export default function HomeScreen() {
     const { pitches, isLoading } = useAppSelector((s: RootState) => s.pitch);
     const { unreadCount } = useAppSelector((s: RootState) => s.notification);
     const avatarFallbackName = (user?.email?.trim()?.[0] ?? 'G').toUpperCase();
+    const scrollRef = useRef<ScrollView>(null);
+    const contentHeightRef = useRef(0);
+    const layoutHeightRef = useRef(0);
+
+    const updateBackToTopVisibility = (scrollY: number) => {
+        const canScroll = contentHeightRef.current > layoutHeightRef.current + 12;
+        const visible = canScroll && scrollY > 120;
+        DeviceEventEmitter.emit(CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, visible);
+    };
 
     useEffect(() => {
         dispatch(fetchPitches({ page: 1, size: 5 }));
@@ -49,6 +60,16 @@ export default function HomeScreen() {
             dispatch(fetchUnreadCount());
         }
     }, [isAuthenticated]);
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener(CLIENT_SCROLL_TO_TOP_EVENT, () => {
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+        });
+        return () => {
+            subscription.remove();
+            DeviceEventEmitter.emit(CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, false);
+        };
+    }, []);
 
     const QUICK_ACTIONS = useMemo(() => [
         { label: 'Đặt sân', icon: 'football-outline', bg: colors.primaryLight, color: colors.primary },
@@ -102,7 +123,22 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+                ref={scrollRef}
+                showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onLayout={(event) => {
+                    layoutHeightRef.current = event.nativeEvent.layout.height;
+                    updateBackToTopVisibility(0);
+                }}
+                onContentSizeChange={(_, h) => {
+                    contentHeightRef.current = h;
+                    updateBackToTopVisibility(0);
+                }}
+                onScroll={(event) => {
+                    updateBackToTopVisibility(event.nativeEvent.contentOffset.y);
+                }}
+            >
                 {/* Quick Actions */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: SPACING.xl, paddingVertical: SPACING.lg }}>
                     {QUICK_ACTIONS.map((action) => (
