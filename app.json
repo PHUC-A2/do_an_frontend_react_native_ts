@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tubsport.mobile"
+      "bundleIdentifier": "com.tubsport.mobile",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +35,13 @@
     "plugins": [
       "expo-secure-store",
       "expo-font",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn."
+        }
+      ]
     ]
   }
 }

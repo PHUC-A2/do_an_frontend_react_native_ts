@@ -10,6 +10,8 @@ interface AuthState {
     isLoading: boolean;
     error: string | null;
     isHydrated: boolean;
+    /** Có JWT trong SecureStore nhưng cần Face ID / vân tay trước khi vào app */
+    pendingBiometricUnlock: boolean;
 }
 
 const initialState: AuthState = {
@@ -18,16 +20,20 @@ const initialState: AuthState = {
     isLoading: false,
     error: null,
     isHydrated: false,
+    pendingBiometricUnlock: false,
 };
 
 // ---- Async Thunks ----
 
 export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
-    const [token, user] = await Promise.all([
+    const [token, user, biometricEnabled] = await Promise.all([
         storage.getAccessToken(),
         storage.getUser<JwtUserDTO>(),
+        storage.getBiometricLoginEnabled(),
     ]);
-    if (token && user) return { user, token };
+    if (token && user) {
+        return { user, requireBiometricUnlock: biometricEnabled };
+    }
     return null;
 });
 
@@ -50,6 +56,11 @@ export const loginAsync = createAsyncThunk(
 );
 
 export const logoutAsync = createAsyncThunk('auth/logout', async () => {
+    // Đăng xuất kiểu "khóa app": giữ token + cờ sinh trắc học để lần sau mở khóa nhanh.
+    return true;
+});
+
+export const hardLogoutAsync = createAsyncThunk('auth/hardLogout', async () => {
     try {
         await authService.logout();
     } finally {
@@ -70,18 +81,34 @@ const authSlice = createSlice({
             state.user = action.payload;
             state.isAuthenticated = true;
         },
+        /** Sau khi xác thực sinh trắc học thành công ở màn khóa mở app */
+        completeBiometricSession(state, action: PayloadAction<JwtUserDTO>) {
+            state.pendingBiometricUnlock = false;
+            state.user = action.payload;
+            state.isAuthenticated = true;
+        },
     },
     extraReducers: (builder) => {
         // Hydrate
         builder.addCase(hydrateAuth.fulfilled, (state, action) => {
-            if (action.payload) {
-                state.user = action.payload.user;
-                state.isAuthenticated = true;
-            }
             state.isHydrated = true;
+            if (action.payload) {
+                if (action.payload.requireBiometricUnlock) {
+                    state.pendingBiometricUnlock = true;
+                    state.user = null;
+                    state.isAuthenticated = false;
+                } else {
+                    state.pendingBiometricUnlock = false;
+                    state.user = action.payload.user;
+                    state.isAuthenticated = true;
+                }
+            } else {
+                state.pendingBiometricUnlock = false;
+            }
         });
         builder.addCase(hydrateAuth.rejected, (state) => {
             state.isHydrated = true;
+            state.pendingBiometricUnlock = false;
         });
 
         // Login
@@ -103,10 +130,16 @@ const authSlice = createSlice({
         builder.addCase(logoutAsync.fulfilled, (state) => {
             state.user = null;
             state.isAuthenticated = false;
+            state.pendingBiometricUnlock = false;
+        });
+        builder.addCase(hardLogoutAsync.fulfilled, (state) => {
+            state.user = null;
+            state.isAuthenticated = false;
+            state.pendingBiometricUnlock = false;
         });
 
     },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, completeBiometricSession } = authSlice.actions;
 export default authSlice.reducer;

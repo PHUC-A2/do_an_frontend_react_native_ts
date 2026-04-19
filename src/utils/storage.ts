@@ -5,6 +5,8 @@ const KEYS = {
     REFRESH_TOKEN: 'refresh_token',
     USER: 'user_info',
     PENDING_VERIFICATION: 'pending_verification',
+    /** Đã bật đăng nhập nhanh bằng Face ID / vân tay (JWT vẫn dùng key ACCESS_TOKEN). */
+    BIOMETRIC_LOGIN_ENABLED: 'biometric_login_enabled',
 } as const;
 
 export const storage = {
@@ -38,11 +40,25 @@ export const storage = {
         await SecureStore.deleteItemAsync(KEYS.USER);
     },
 
+    async getBiometricLoginEnabled(): Promise<boolean> {
+        const v = await SecureStore.getItemAsync(KEYS.BIOMETRIC_LOGIN_ENABLED);
+        return v === 'true';
+    },
+
+    async setBiometricLoginEnabled(enabled: boolean): Promise<void> {
+        if (enabled) {
+            await SecureStore.setItemAsync(KEYS.BIOMETRIC_LOGIN_ENABLED, 'true');
+        } else {
+            await SecureStore.deleteItemAsync(KEYS.BIOMETRIC_LOGIN_ENABLED);
+        }
+    },
+
     async clearAll(): Promise<void> {
         await Promise.all([
             SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN),
             SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN),
             SecureStore.deleteItemAsync(KEYS.USER),
+            SecureStore.deleteItemAsync(KEYS.BIOMETRIC_LOGIN_ENABLED),
         ]);
     },
 

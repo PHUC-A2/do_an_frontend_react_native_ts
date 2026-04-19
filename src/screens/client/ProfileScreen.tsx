@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@hooks/useAuth';
+import { useBiometric } from '@hooks/useBiometric';
+import { biometricService } from '@services/BiometricService';
 import Avatar from '@components/common/Avatar';
 import GuestPrompt from '@components/common/GuestPrompt';
 import { ClientStackParamList } from '@navigation/types';
@@ -16,9 +18,25 @@ type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
 export default function ProfileScreen() {
     const { user, logout, isAuthenticated, isAdmin } = useAuth();
+    const { handleEnableBiometric, handleDisableBiometric, getBiometricEnabled } = useBiometric();
     const navigation = useNavigation<Nav>();
     const toast = useToast();
     const { colors, isDark, toggleTheme } = useTheme();
+    const [biometricEnabled, setBiometricEnabled] = useState(false);
+    const [biometricAvailable, setBiometricAvailable] = useState(false);
+    const [biometricBusy, setBiometricBusy] = useState(false);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        void (async () => {
+            const [enabled, canOffer] = await Promise.all([
+                getBiometricEnabled(),
+                biometricService.canOfferBiometricLogin(),
+            ]);
+            setBiometricEnabled(enabled);
+            setBiometricAvailable(canOffer);
+        })();
+    }, [isAuthenticated, getBiometricEnabled]);
 
     if (!isAuthenticated) {
         return <GuestPrompt icon="person-outline" title="Trang cá nhân" subtitle="Đăng nhập để xem và chỉnh sửa thông tin cá nhân của bạn" />;
@@ -44,6 +62,29 @@ export default function ProfileScreen() {
         { icon: 'shield-checkmark-outline', label: 'Bảo mật', onPress: () => { } },
         { icon: 'help-circle-outline', label: 'Trợ giúp', onPress: () => { } },
     ];
+
+    const toggleBiometric = async (nextValue: boolean) => {
+        if (!biometricAvailable) {
+            toast.error('Thiết bị chưa sẵn sàng Face ID/Vân tay.');
+            return;
+        }
+        setBiometricBusy(true);
+        try {
+            if (nextValue) {
+                await handleEnableBiometric();
+                setBiometricEnabled(true);
+                toast.success('Đã bật đăng nhập sinh trắc học');
+            } else {
+                await handleDisableBiometric();
+                setBiometricEnabled(false);
+                toast.success('Đã tắt đăng nhập sinh trắc học');
+            }
+        } catch (err: any) {
+            toast.error(err?.message ?? 'Không thể cập nhật sinh trắc học');
+        } finally {
+            setBiometricBusy(false);
+        }
+    };
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
@@ -88,6 +129,39 @@ export default function ProfileScreen() {
                             <Ionicons name="chevron-forward" size={16} color={colors.textHint} />
                         </TouchableOpacity>
                     ))}
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: SPACING.lg,
+                            paddingVertical: SPACING.md,
+                            gap: SPACING.md,
+                            borderTopWidth: 1,
+                            borderTopColor: colors.divider,
+                            opacity: biometricBusy ? 0.6 : 1,
+                        }}
+                    >
+                        <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="finger-print-outline" size={20} color={colors.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: FONT_SIZE.md, color: colors.textPrimary, fontWeight: FONT_WEIGHT.medium }}>
+                                Đăng nhập bằng sinh trắc học
+                            </Text>
+                            <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: 2 }}>
+                                Bật/tắt Face ID hoặc vân tay cho đăng nhập nhanh
+                            </Text>
+                        </View>
+                        <Switch
+                            value={biometricEnabled}
+                            disabled={biometricBusy || !biometricAvailable}
+                            onValueChange={(next) => {
+                                void toggleBiometric(next);
+                            }}
+                            thumbColor={biometricEnabled ? '#fff' : colors.textHint}
+                            trackColor={{ false: colors.border, true: colors.primary }}
+                        />
+                    </View>
                 </View>
 
                 {/* Logout */}

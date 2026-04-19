@@ -171,7 +171,7 @@ export default function ResetPasswordScreen({ route, navigation }: Props) {
                             ))}
                         </View>
                         {errors.otp && (
-                            <Text style={{ fontSize: FONT_SIZE.sm, color: colors.error, marginBottom: SPACING.lg }}>
+                            <Text style={{ fontSize: FONT_SIZE.sm, color: colors.danger, marginBottom: SPACING.lg }}>
                                 {errors.otp}
                             </Text>
                         )}

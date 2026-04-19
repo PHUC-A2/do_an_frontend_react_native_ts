@@ -19,11 +19,17 @@ import Input from '@components/common/Input';
 import { useTheme } from '@config/ThemeContext';
 import { FONT_SIZE, FONT_WEIGHT, SPACING, SHADOW } from '@config/theme';
 import { isValidEmail, isValidPassword } from '@utils/helpers';
+import BiometricPromptModal from '@components/auth/BiometricPromptModal';
+import type { BiometricKind } from '@components/auth/BiometricPromptModal';
+import { useBiometric } from '@hooks/useBiometric';
+import { biometricService } from '@services/BiometricService';
+import { storage } from '@utils/storage';
 
 type Props = AuthScreenProps<'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
     const { login, isLoading, error, dismissError, isAuthenticated } = useAuth();
+    const { handleEnableBiometric, handleBiometricLogin } = useBiometric();
     const toast = useToast();
     const { colors } = useTheme();
 
@@ -33,13 +39,20 @@ export default function LoginScreen({ navigation }: Props) {
     const [passwordError, setPasswordError] = useState('');
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
     const [verifying, setVerifying] = useState(false);
+    const [biometricOfferOpen, setBiometricOfferOpen] = useState(false);
+    const [biometricKind, setBiometricKind] = useState<BiometricKind>('unknown');
+    const [enableBioLoading, setEnableBioLoading] = useState(false);
+    const [quickBioEnabled, setQuickBioEnabled] = useState(false);
+    const [quickBioLoading, setQuickBioLoading] = useState(false);
+    const [shouldCloseScreen, setShouldCloseScreen] = useState(false);
 
-    // Close the modal when login succeeds (AuthNavigator was opened as a modal)
+    // Đóng modal Auth sau khi xong luồng đăng nhập (kể cả hộp thoại bật sinh trắc học)
     useEffect(() => {
-        if (isAuthenticated) {
+        if (isAuthenticated && shouldCloseScreen) {
             navigation.getParent()?.goBack();
+            setShouldCloseScreen(false);
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, shouldCloseScreen, navigation]);
 
     useEffect(() => {
         if (error) {
@@ -50,6 +63,18 @@ export default function LoginScreen({ navigation }: Props) {
             dismissError();
         }
     }, [error]);
+
+    useEffect(() => {
+        void (async () => {
+            const [enabled, canOffer, kind] = await Promise.all([
+                storage.getBiometricLoginEnabled(),
+                biometricService.canOfferBiometricLogin(),
+                biometricService.getSupportedKind(),
+            ]);
+            setBiometricKind(kind);
+            setQuickBioEnabled(enabled && canOffer);
+        })();
+    }, []);
 
     const handleGoVerify = async () => {
         const targetEmail = (unverifiedEmail ?? email).trim();
@@ -93,11 +118,68 @@ export default function LoginScreen({ navigation }: Props) {
         const result = await login({ username: email.trim(), password });
         if (loginAsync.fulfilled.match(result)) {
             toast.success('Đăng nhập thành công');
+            const [canOffer, enabled] = await Promise.all([
+                biometricService.canOfferBiometricLogin(),
+                storage.getBiometricLoginEnabled(),
+            ]);
+            const kind = await biometricService.getSupportedKind();
+            setBiometricKind(kind);
+            if (canOffer && !enabled) {
+                setBiometricOfferOpen(true);
+            } else {
+                setQuickBioEnabled(canOffer && enabled);
+                setShouldCloseScreen(true);
+            }
+        }
+    };
+
+    const finishAuthModal = () => {
+        setBiometricOfferOpen(false);
+        setShouldCloseScreen(true);
+    };
+
+    const handleQuickBiometricPress = async () => {
+        setQuickBioLoading(true);
+        setShouldCloseScreen(true);
+        try {
+            const ok = await handleBiometricLogin();
+            if (!ok) {
+                setShouldCloseScreen(false);
+                toast.error('Xác thực sinh trắc học thất bại. Vui lòng thử lại.');
+            }
+        } catch (err: any) {
+            setShouldCloseScreen(false);
+            toast.error(err?.message ?? 'Không thể đăng nhập bằng sinh trắc học.');
+        } finally {
+            setQuickBioLoading(false);
         }
     };
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <BiometricPromptModal
+                visible={biometricOfferOpen}
+                biometricKind={biometricKind}
+                loading={enableBioLoading}
+                onCancel={finishAuthModal}
+                onConfirm={async () => {
+                    setEnableBioLoading(true);
+                    try {
+                        const ok = await handleEnableBiometric();
+                        if (ok) {
+                            toast.success('Đã bật đăng nhập nhanh');
+                            setQuickBioEnabled(true);
+                        } else {
+                            toast.error('Không thể bật sinh trắc học. Bạn vẫn có thể đăng nhập bằng email và mật khẩu.');
+                        }
+                    } catch (err: any) {
+                        toast.error(err?.message ?? 'Không thể bật sinh trắc học.');
+                    } finally {
+                        setEnableBioLoading(false);
+                        finishAuthModal();
+                    }
+                }}
+            />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
@@ -172,6 +254,35 @@ export default function LoginScreen({ navigation }: Props) {
                             fullWidth
                             style={{ marginTop: SPACING.sm }}
                         />
+
+                        {quickBioEnabled && (
+                            <View style={{ marginTop: SPACING.md, alignItems: 'center' }}>
+                                <TouchableOpacity
+                                    onPress={handleQuickBiometricPress}
+                                    disabled={quickBioLoading}
+                                    style={{
+                                        width: 64,
+                                        height: 64,
+                                        borderRadius: 32,
+                                        borderWidth: 1,
+                                        borderColor: colors.primary,
+                                        backgroundColor: colors.primaryLight,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        opacity: quickBioLoading ? 0.7 : 1,
+                                    }}
+                                >
+                                    <Ionicons
+                                        name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
+                                        size={30}
+                                        color={colors.primary}
+                                    />
+                                </TouchableOpacity>
+                                <Text style={{ marginTop: SPACING.sm, fontSize: FONT_SIZE.sm, color: colors.textSecondary }}>
+                                    {quickBioLoading ? 'Đang xác thực...' : 'Chạm biểu tượng để đăng nhập nhanh'}
+                                </Text>
+                            </View>
+                        )}
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: SPACING.xl }}>
                             <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />

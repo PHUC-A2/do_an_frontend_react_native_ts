@@ -1,42 +1,40 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "strict": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@components/*": [
-        "src/components/*"
+        "./src/components/*"
       ],
       "@screens/*": [
-        "src/screens/*"
+        "./src/screens/*"
       ],
       "@navigation/*": [
-        "src/navigation/*"
+        "./src/navigation/*"
       ],
       "@redux/*": [
-        "src/redux/*"
+        "./src/redux/*"
       ],
       "@services/*": [
-        "src/services/*"
+        "./src/services/*"
       ],
       "@hooks/*": [
-        "src/hooks/*"
+        "./src/hooks/*"
       ],
       "@utils/*": [
-        "src/utils/*"
+        "./src/utils/*"
       ],
       "@config/*": [
-        "src/config/*"
+        "./src/config/*"
       ],
       "@i18n/*": [
-        "src/i18n/*"
+        "./src/i18n/*"
       ],
       "@assets/*": [
-        "src/assets/*"
+        "./src/assets/*"
       ]
     }
   },

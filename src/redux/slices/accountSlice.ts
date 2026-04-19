@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '@services/auth.service';
 import type { ResAccountDTO } from '@/types/user.types';
-import { logoutAsync } from './authSlice';
+import { hardLogoutAsync, logoutAsync } from './authSlice';
 
 interface AccountState {
     account: ResAccountDTO | null;
@@ -79,6 +79,11 @@ const accountSlice = createSlice({
                 state.error = action.payload ?? 'Không lấy được thông tin tài khoản';
             })
             .addCase(logoutAsync.fulfilled, (state) => {
+                state.account = null;
+                state.loading = false;
+                state.error = null;
+            })
+            .addCase(hardLogoutAsync.fulfilled, (state) => {
                 state.account = null;
                 state.loading = false;
                 state.error = null;
