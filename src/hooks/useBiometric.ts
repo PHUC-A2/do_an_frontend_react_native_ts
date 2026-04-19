@@ -1,29 +1,32 @@
 import { useCallback } from 'react';
-import { Platform } from 'react-native';
+import { DeviceEventEmitter, Platform } from 'react-native';
 import { useAppDispatch } from '@redux/hooks';
 import { completeBiometricSession } from '@redux/slices/authSlice';
 import { biometricService } from '@services/BiometricService';
 import { storage } from '@utils/storage';
 import type { JwtUserDTO } from '@/types/auth.types';
 
+const METHOD_LABEL = Platform.OS === 'ios' ? 'Face ID' : 'vân tay';
+export const BIOMETRIC_STATUS_CHANGED_EVENT = 'biometric_status_changed';
+
 const mapBiometricError = (error?: string): string => {
     switch (error) {
         case 'not_available':
-            return 'Thiết bị không hỗ trợ sinh trắc học.';
+            return `Thiết bị không hỗ trợ ${METHOD_LABEL}.`;
         case 'not_enrolled':
-            return 'Thiết bị chưa cài Face ID/Vân tay.';
+            return `Thiết bị chưa cài ${METHOD_LABEL}.`;
         case 'user_cancel':
         case 'system_cancel':
         case 'app_cancel':
-            return 'Bạn đã hủy xác thực sinh trắc học.';
+            return `Bạn đã hủy xác thực ${METHOD_LABEL}.`;
         case 'lockout':
-            return 'Face ID/Vân tay bị khóa tạm thời. Vui lòng mở khóa bằng mã máy rồi thử lại.';
+            return `${METHOD_LABEL} bị khóa tạm thời. Vui lòng mở khóa bằng mã máy rồi thử lại.`;
         case 'user_fallback':
             return 'Bạn đã chọn đăng nhập bằng mã máy.';
         case 'authentication_failed':
-            return 'Face ID/Vân tay không khớp. Vui lòng thử lại.';
+            return `${METHOD_LABEL} không khớp. Vui lòng thử lại.`;
         default:
-            return `Xác thực sinh trắc học không thành công${error ? ` (${error})` : ''}.`;
+            return `Xác thực ${METHOD_LABEL} không thành công${error ? ` (${error})` : ''}.`;
     }
 };
 
@@ -49,17 +52,17 @@ export function useBiometric() {
             ]);
 
             if (!canOffer) {
-                throw new Error('Thiết bị chưa sẵn sàng Face ID/Vân tay hoặc bạn chưa đăng ký sinh trắc học trong máy.');
+                throw new Error(`Thiết bị chưa sẵn sàng ${METHOD_LABEL} hoặc bạn chưa đăng ký ${METHOD_LABEL} trong máy.`);
             }
             if (!biometricEnabled) {
-                throw new Error('Bạn chưa bật đăng nhập bằng sinh trắc học.');
+                throw new Error(`Bạn chưa bật đăng nhập bằng ${METHOD_LABEL}.`);
             }
             if (!user || !token) {
                 throw new Error('Phiên đăng nhập nhanh đã hết. Vui lòng đăng nhập bằng mật khẩu để bật lại.');
             }
 
             const result = await biometricService.authenticateDetailed({
-                promptMessage: 'Đăng nhập bằng sinh trắc học',
+                promptMessage: `Đăng nhập bằng ${METHOD_LABEL}`,
                 cancelLabel: 'Hủy',
                 fallbackLabel: '',
                 disableDeviceFallback: Platform.OS === 'ios',
@@ -83,10 +86,10 @@ export function useBiometric() {
     const handleEnableBiometric = useCallback(async (): Promise<boolean> => {
         try {
             const can = await biometricService.canOfferBiometricLogin();
-            if (!can) throw new Error('Thiết bị không sẵn sàng để bật đăng nhập sinh trắc học.');
+            if (!can) throw new Error(`Thiết bị không sẵn sàng để bật đăng nhập bằng ${METHOD_LABEL}.`);
 
             const result = await biometricService.authenticateDetailed({
-                promptMessage: 'Xác nhận để bật đăng nhập nhanh',
+                promptMessage: `Xác nhận để bật đăng nhập nhanh bằng ${METHOD_LABEL}`,
                 cancelLabel: 'Hủy',
                 // Bước bật tính năng: cho phép iOS dùng passcode fallback để giảm trường hợp fail giả.
                 disableDeviceFallback: false,
@@ -97,6 +100,7 @@ export function useBiometric() {
             }
 
             await storage.setBiometricLoginEnabled(true);
+            DeviceEventEmitter.emit(BIOMETRIC_STATUS_CHANGED_EVENT, { enabled: true });
             return true;
         } catch (err: any) {
             console.log('[BiometricEnable] error', err?.message ?? err);
@@ -106,6 +110,7 @@ export function useBiometric() {
 
     const handleDisableBiometric = useCallback(async (): Promise<void> => {
         await storage.setBiometricLoginEnabled(false);
+        DeviceEventEmitter.emit(BIOMETRIC_STATUS_CHANGED_EVENT, { enabled: false });
     }, []);
 
     return { handleBiometricLogin, handleEnableBiometric, handleDisableBiometric, getBiometricEnabled };

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Switch } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Switch, Platform, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@hooks/useAuth';
-import { useBiometric } from '@hooks/useBiometric';
+import { BIOMETRIC_STATUS_CHANGED_EVENT, useBiometric } from '@hooks/useBiometric';
 import { biometricService } from '@services/BiometricService';
 import Avatar from '@components/common/Avatar';
 import GuestPrompt from '@components/common/GuestPrompt';
@@ -22,21 +22,42 @@ export default function ProfileScreen() {
     const navigation = useNavigation<Nav>();
     const toast = useToast();
     const { colors, isDark, toggleTheme } = useTheme();
+    const biometricLabel = Platform.OS === 'ios' ? 'Face ID' : 'vân tay';
+    const biometricIconName = Platform.OS === 'ios' ? 'scan-outline' : 'finger-print-outline';
     const [biometricEnabled, setBiometricEnabled] = useState(false);
     const [biometricAvailable, setBiometricAvailable] = useState(false);
     const [biometricBusy, setBiometricBusy] = useState(false);
 
-    useEffect(() => {
+    const loadBiometricState = useCallback(async () => {
         if (!isAuthenticated) return;
-        void (async () => {
-            const [enabled, canOffer] = await Promise.all([
-                getBiometricEnabled(),
-                biometricService.canOfferBiometricLogin(),
-            ]);
-            setBiometricEnabled(enabled);
-            setBiometricAvailable(canOffer);
-        })();
+        const [enabled, canOffer] = await Promise.all([
+            getBiometricEnabled(),
+            biometricService.canOfferBiometricLogin(),
+        ]);
+        setBiometricEnabled(enabled);
+        setBiometricAvailable(canOffer);
     }, [isAuthenticated, getBiometricEnabled]);
+
+    useFocusEffect(
+        useCallback(() => {
+            void loadBiometricState();
+            return undefined;
+        }, [loadBiometricState]),
+    );
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener(
+            BIOMETRIC_STATUS_CHANGED_EVENT,
+            (payload?: { enabled?: boolean }) => {
+                if (typeof payload?.enabled === 'boolean') {
+                    setBiometricEnabled(payload.enabled);
+                } else {
+                    void loadBiometricState();
+                }
+            },
+        );
+        return () => subscription.remove();
+    }, [loadBiometricState]);
 
     if (!isAuthenticated) {
         return <GuestPrompt icon="person-outline" title="Trang cá nhân" subtitle="Đăng nhập để xem và chỉnh sửa thông tin cá nhân của bạn" />;
@@ -65,7 +86,7 @@ export default function ProfileScreen() {
 
     const toggleBiometric = async (nextValue: boolean) => {
         if (!biometricAvailable) {
-            toast.error('Thiết bị chưa sẵn sàng Face ID/Vân tay.');
+            toast.error(`Thiết bị chưa sẵn sàng ${biometricLabel}.`);
             return;
         }
         setBiometricBusy(true);
@@ -73,14 +94,14 @@ export default function ProfileScreen() {
             if (nextValue) {
                 await handleEnableBiometric();
                 setBiometricEnabled(true);
-                toast.success('Đã bật đăng nhập sinh trắc học');
+                toast.success(`Đã bật đăng nhập bằng ${biometricLabel}`);
             } else {
                 await handleDisableBiometric();
                 setBiometricEnabled(false);
-                toast.success('Đã tắt đăng nhập sinh trắc học');
+                toast.success(`Đã tắt đăng nhập bằng ${biometricLabel}`);
             }
         } catch (err: any) {
-            toast.error(err?.message ?? 'Không thể cập nhật sinh trắc học');
+            toast.error(err?.message ?? `Không thể cập nhật ${biometricLabel}`);
         } finally {
             setBiometricBusy(false);
         }
@@ -142,14 +163,14 @@ export default function ProfileScreen() {
                         }}
                     >
                         <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name="finger-print-outline" size={20} color={colors.primary} />
+                            <Ionicons name={biometricIconName} size={20} color={colors.primary} />
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: FONT_SIZE.md, color: colors.textPrimary, fontWeight: FONT_WEIGHT.medium }}>
-                                Đăng nhập bằng sinh trắc học
+                                Đăng nhập bằng {biometricLabel}
                             </Text>
                             <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: 2 }}>
-                                Bật/tắt Face ID hoặc vân tay cho đăng nhập nhanh
+                                Bật/tắt {biometricLabel} cho đăng nhập nhanh
                             </Text>
                         </View>
                         <Switch

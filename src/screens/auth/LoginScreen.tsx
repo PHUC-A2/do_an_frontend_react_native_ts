@@ -45,6 +45,8 @@ export default function LoginScreen({ navigation }: Props) {
     const [quickBioEnabled, setQuickBioEnabled] = useState(false);
     const [quickBioLoading, setQuickBioLoading] = useState(false);
     const [shouldCloseScreen, setShouldCloseScreen] = useState(false);
+    const quickLoginMethodLabel = Platform.OS === 'ios' ? 'Face ID' : 'vân tay';
+    const quickLoginIconName = Platform.OS === 'ios' ? 'scan-outline' : 'finger-print-outline';
 
     // Đóng modal Auth sau khi xong luồng đăng nhập (kể cả hộp thoại bật sinh trắc học)
     useEffect(() => {
@@ -145,11 +147,11 @@ export default function LoginScreen({ navigation }: Props) {
             const ok = await handleBiometricLogin();
             if (!ok) {
                 setShouldCloseScreen(false);
-                toast.error('Xác thực sinh trắc học thất bại. Vui lòng thử lại.');
+                toast.error(`Xác thực ${quickLoginMethodLabel} thất bại. Vui lòng thử lại.`);
             }
         } catch (err: any) {
             setShouldCloseScreen(false);
-            toast.error(err?.message ?? 'Không thể đăng nhập bằng sinh trắc học.');
+            toast.error(err?.message ?? `Không thể đăng nhập bằng ${quickLoginMethodLabel}.`);
         } finally {
             setQuickBioLoading(false);
         }
@@ -170,10 +172,10 @@ export default function LoginScreen({ navigation }: Props) {
                             toast.success('Đã bật đăng nhập nhanh');
                             setQuickBioEnabled(true);
                         } else {
-                            toast.error('Không thể bật sinh trắc học. Bạn vẫn có thể đăng nhập bằng email và mật khẩu.');
+                            toast.error(`Không thể bật ${quickLoginMethodLabel}. Bạn vẫn có thể đăng nhập bằng email và mật khẩu.`);
                         }
                     } catch (err: any) {
-                        toast.error(err?.message ?? 'Không thể bật sinh trắc học.');
+                        toast.error(err?.message ?? `Không thể bật ${quickLoginMethodLabel}.`);
                     } finally {
                         setEnableBioLoading(false);
                         finishAuthModal();
@@ -273,13 +275,13 @@ export default function LoginScreen({ navigation }: Props) {
                                     }}
                                 >
                                     <Ionicons
-                                        name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
+                                        name={quickLoginIconName}
                                         size={30}
                                         color={colors.primary}
                                     />
                                 </TouchableOpacity>
                                 <Text style={{ marginTop: SPACING.sm, fontSize: FONT_SIZE.sm, color: colors.textSecondary }}>
-                                    {quickBioLoading ? 'Đang xác thực...' : 'Chạm biểu tượng để đăng nhập nhanh'}
+                                    {quickBioLoading ? `Đang xác thực ${quickLoginMethodLabel}...` : `Đăng nhập bằng ${quickLoginMethodLabel}`}
                                 </Text>
                             </View>
                         )}
