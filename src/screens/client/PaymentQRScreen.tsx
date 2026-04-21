@@ -3,6 +3,7 @@ import {
     View,
     Text,
     Image,
+    Modal,
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
@@ -11,7 +12,10 @@ import {
     Animated,
     Share,
     Platform,
+    Dimensions,
+    StatusBar,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -45,6 +49,10 @@ export default function PaymentQRScreen({ route }: Props) {
     const [creating, setCreating] = useState(false);
     const [qr, setQr] = useState<ResPaymentQRDTO | null>(null);
     const [paidNotified, setPaidNotified] = useState(false);
+    const [proofUri, setProofUri]           = useState<string | null>(null);
+    const [uploading, setUploading]         = useState(false);
+    const [proofUploaded, setProofUploaded] = useState(false);
+    const [previewVisible, setPreviewVisible] = useState(false);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -52,14 +60,27 @@ export default function PaymentQRScreen({ route }: Props) {
 
     const shadowStyle = isDark ? {} : SHADOW.md;
 
-    // ── Load booking ──────────────────────────────────────────────────────────
+    // ── Load booking + auto-load pending QR ───────────────────────────────────
     useEffect(() => {
         let cancelled = false;
         setLoadingBooking(true);
-        bookingService.getBookingById(bookingId)
-            .then((res) => {
+
+        Promise.all([
+            bookingService.getBookingById(bookingId),
+            paymentService.getPendingByBooking(bookingId).catch(() => null),
+        ])
+            .then(([bookingRes, pendingRes]) => {
                 if (cancelled) return;
-                setBooking(res.data.data ?? null);
+                const b = bookingRes.data.data ?? null;
+                setBooking(b);
+
+                // Phục hồi QR của payment PENDING nếu có (không cần nhấn lại nút)
+                const pendingQR = pendingRes?.data?.data ?? null;
+                if (pendingQR?.vietQrUrl && b?.status !== 'PAID') {
+                    setQr(pendingQR);
+                    setMethod('BANK_TRANSFER');
+                }
+
                 Animated.parallel([
                     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
                     Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
@@ -67,6 +88,7 @@ export default function PaymentQRScreen({ route }: Props) {
             })
             .catch(() => { if (!cancelled) setBooking(null); })
             .finally(() => { if (!cancelled) setLoadingBooking(false); });
+
         return () => { cancelled = true; };
     }, [bookingId]);
 
@@ -150,8 +172,9 @@ export default function PaymentQRScreen({ route }: Props) {
                 return;
             }
 
+            // Lấy (hoặc lấy lại) QR từ paymentCode — backend đã trả paymentCode dù tạo mới hay PENDING cũ
             const qrRes = await paymentService.getPaymentQR(paymentCode);
-            if (qrRes.data.statusCode !== 200 || !qrRes.data.data) {
+            if (!qrRes.data.data) {
                 Alert.alert('Lỗi', 'Không thể tải mã QR. Vui lòng thử lại.');
                 return;
             }
@@ -178,6 +201,106 @@ export default function PaymentQRScreen({ route }: Props) {
         try {
             await Share.share({ message: qr.content, title: 'Nội dung chuyển khoản' });
         } catch { /* silent */ }
+    };
+
+    // ── Proof upload ──────────────────────────────────────────────────────────
+    const requestMediaPermission = async (): Promise<boolean> => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert(
+                'Cần quyền truy cập',
+                'Vui lòng cho phép truy cập thư viện ảnh trong Cài đặt.',
+                [{ text: 'Đồng ý' }]
+            );
+            return false;
+        }
+        return true;
+    };
+
+    const requestCameraPermission = async (): Promise<boolean> => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert(
+                'Cần quyền camera',
+                'Vui lòng cho phép truy cập camera trong Cài đặt.',
+                [{ text: 'Đồng ý' }]
+            );
+            return false;
+        }
+        return true;
+    };
+
+    const pickProofImage = () => {
+        Alert.alert('Chọn ảnh minh chứng', 'Chọn nguồn ảnh', [
+            {
+                text: 'Chụp ảnh',
+                onPress: async () => {
+                    if (!(await requestCameraPermission())) return;
+                    const result = await ImagePicker.launchCameraAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 1,
+                        allowsEditing: false,
+                    });
+                    if (!result.canceled && result.assets[0]) {
+                        setProofUri(result.assets[0].uri);
+                        setProofUploaded(false);
+                    }
+                },
+            },
+            {
+                text: 'Thư viện ảnh',
+                onPress: async () => {
+                    if (!(await requestMediaPermission())) return;
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 1,
+                        allowsEditing: false,
+                    });
+                    if (!result.canceled && result.assets[0]) {
+                        setProofUri(result.assets[0].uri);
+                        setProofUploaded(false);
+                    }
+                },
+            },
+            { text: 'Hủy', style: 'cancel' },
+        ]);
+    };
+
+    const handleUploadProof = async () => {
+        if (!proofUri || !qr) return;
+        setUploading(true);
+        try {
+            const filename = proofUri.split('/').pop() ?? 'proof.jpg';
+            const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+            const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+
+            const formData = new FormData();
+            formData.append('file', { uri: proofUri, name: filename, type: mimeType } as any);
+            formData.append('folder', 'payment');
+
+            const uploadRes = await paymentService.uploadProofImage(formData);
+            const proofUrl = uploadRes.data.data?.url;
+            if (!proofUrl) throw new Error('Không nhận được URL ảnh');
+
+            await paymentService.attachProof(qr.paymentId, proofUrl);
+            setProofUploaded(true);
+            Alert.alert('Thành công', 'Ảnh minh chứng đã được tải lên.', [{ text: 'Đồng ý' }]);
+        } catch (err: any) {
+            Alert.alert('Tải ảnh thất bại', err?.response?.data?.message ?? 'Vui lòng thử lại.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removeProof = () => {
+        Alert.alert('Xóa ảnh', 'Bạn muốn xóa ảnh minh chứng?', [
+            { text: 'Hủy', style: 'cancel' },
+            {
+                text: 'Xóa',
+                style: 'destructive',
+                onPress: () => { setProofUri(null); setProofUploaded(false); },
+            },
+        ]);
     };
 
     const canPay = booking?.status === 'ACTIVE' || booking?.status === 'CONFIRMED';
@@ -423,7 +546,7 @@ export default function PaymentQRScreen({ route }: Props) {
                                 onPress={handleCopyContent}
                                 activeOpacity={0.7}
                             >
-                                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                                <Ionicons name="share-social" size={16} color={colors.primary} />
                                 <Text style={[styles.copyBtnText, { color: colors.primary }]}>Chia sẻ</Text>
                             </TouchableOpacity>
                         </View>
@@ -433,8 +556,100 @@ export default function PaymentQRScreen({ route }: Props) {
                             <View style={[styles.pollingBox, { backgroundColor: '#EFF6FF', borderRadius: BORDER_RADIUS.md }]}>
                                 <ActivityIndicator size="small" color="#3B82F6" />
                                 <Text style={[styles.pollingText, { color: '#1D4ED8' }]}>
-                                    Đang chờ xác nhận thanh toán... (tự động kiểm tra mỗi 15 giây)
+                                    Đang chờ xác nhận thanh toán...
                                 </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* ── Proof upload section ── */}
+                {qr && method === 'BANK_TRANSFER' && booking.status !== 'PAID' && (
+                    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}>
+                        <Text style={[styles.sectionLabel, { color: colors.textHint }]}>
+                            Ảnh minh chứng thanh toán
+                        </Text>
+                        <Text style={[styles.proofHint, { color: colors.textSecondary }]}>
+                            Không bắt buộc — có thể upload sau khi chuyển khoản để admin xác nhận nhanh hơn.
+                        </Text>
+
+                        {!proofUri ? (
+                            /* Chưa chọn ảnh → nút chọn ảnh */
+                            <TouchableOpacity
+                                style={[styles.pickImageBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                                onPress={pickProofImage}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="camera-outline" size={22} color={colors.textHint} />
+                                <Text style={[styles.pickImageText, { color: colors.textSecondary }]}>
+                                    Chọn hoặc chụp ảnh
+                                </Text>
+                            </TouchableOpacity>
+                        ) : (
+                            /* Đã chọn ảnh → preview + nút xóa / upload */
+                            <View style={styles.proofPreviewWrap}>
+                                {/* Tap ảnh → mở preview fullscreen */}
+                                <TouchableOpacity onPress={() => setPreviewVisible(true)} activeOpacity={0.9}>
+                                    <Image
+                                        source={{ uri: proofUri }}
+                                        style={[styles.proofPreview, { borderColor: colors.border }]}
+                                        resizeMode="cover"
+                                    />
+                                    {/* badge phóng to */}
+                                    <View style={[styles.changePhotoBadge, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+                                        <Ionicons name="expand-outline" size={12} color="#fff" />
+                                        <Text style={styles.changePhotoText}>Xem</Text>
+                                    </View>
+                                </TouchableOpacity>
+
+                                {/* Nút đổi ảnh riêng */}
+                                <TouchableOpacity
+                                    style={[styles.changePhotoBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                                    onPress={pickProofImage}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="camera-outline" size={15} color={colors.textSecondary} />
+                                    <Text style={[styles.changePhotoBtnText, { color: colors.textSecondary }]}>
+                                        Đổi ảnh
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <View style={styles.proofActions}>
+                                    {proofUploaded ? (
+                                        <View style={[styles.uploadedBadge, { backgroundColor: '#DCFCE7' }]}>
+                                            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                                            <Text style={[styles.uploadedText, { color: '#15803D' }]}>
+                                                Đã tải lên thành công
+                                            </Text>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={[styles.uploadBtn, { backgroundColor: colors.primary }]}
+                                            onPress={handleUploadProof}
+                                            disabled={uploading}
+                                            activeOpacity={0.85}
+                                        >
+                                            {uploading ? (
+                                                <ActivityIndicator size="small" color="#fff" />
+                                            ) : (
+                                                <>
+                                                    <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
+                                                    <Text style={styles.uploadBtnText}>Tải lên</Text>
+                                                </>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+
+                                    <TouchableOpacity
+                                        style={[styles.removeBtn, { borderColor: colors.border }]}
+                                        onPress={removeProof}
+                                        disabled={uploading}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="trash-outline" size={15} color={colors.textHint} />
+                                        <Text style={[styles.removeBtnText, { color: colors.textHint }]}>Xóa</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         )}
                     </View>
@@ -466,6 +681,63 @@ export default function PaymentQRScreen({ route }: Props) {
                     </View>
                 )}
             </Animated.ScrollView>
+
+            {/* ── Full-screen image preview modal ── */}
+            {proofUri && (
+                <Modal
+                    visible={previewVisible}
+                    transparent
+                    animationType="fade"
+                    statusBarTranslucent
+                    onRequestClose={() => setPreviewVisible(false)}
+                >
+                    <View style={previewStyles.overlay}>
+                        <StatusBar backgroundColor="rgba(0,0,0,0.95)" barStyle="light-content" />
+
+                        {/* Header */}
+                        <View style={previewStyles.header}>
+                            <Text style={previewStyles.headerTitle}>Ảnh minh chứng</Text>
+                            <TouchableOpacity
+                                style={previewStyles.closeBtn}
+                                onPress={() => setPreviewVisible(false)}
+                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            >
+                                <Ionicons name="close" size={26} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Image — fills remaining space */}
+                        <View style={previewStyles.imageWrap}>
+                            <Image
+                                source={{ uri: proofUri }}
+                                style={previewStyles.fullImage}
+                                resizeMode="contain"
+                            />
+                        </View>
+
+                        {/* Bottom actions */}
+                        <View style={previewStyles.footer}>
+                            <TouchableOpacity
+                                style={[previewStyles.footerBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+                                onPress={() => { setPreviewVisible(false); pickProofImage(); }}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="camera-outline" size={18} color="#fff" />
+                                <Text style={previewStyles.footerBtnText}>Đổi ảnh</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[previewStyles.footerBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+                                onPress={() => setPreviewVisible(false)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="checkmark-outline" size={18} color="#fff" />
+                                <Text style={previewStyles.footerBtnText}>Đóng</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            )}
         </SafeAreaView>
     );
 }
@@ -700,6 +972,86 @@ const styles = StyleSheet.create({
     },
     pollingText: { flex: 1, fontSize: FONT_SIZE.xs, lineHeight: 18 },
 
+    // Proof upload
+    proofHint: { fontSize: FONT_SIZE.xs, lineHeight: 18, marginBottom: SPACING.md },
+    pickImageBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.sm,
+        borderWidth: 1.5,
+        borderStyle: 'dashed',
+        borderRadius: BORDER_RADIUS.md,
+        paddingVertical: SPACING.xl,
+        minHeight: 80,
+    },
+    pickImageText: { fontSize: FONT_SIZE.sm },
+
+    proofPreviewWrap: { gap: SPACING.md },
+    proofPreview: {
+        width: '100%',
+        height: 180,
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1,
+    },
+    changePhotoBadge: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: 4,
+        borderRadius: BORDER_RADIUS.full,
+    },
+    changePhotoText: { color: '#fff', fontSize: 11, fontWeight: FONT_WEIGHT.semibold },
+
+    changePhotoBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.sm,
+        paddingVertical: SPACING.sm,
+        borderRadius: BORDER_RADIUS.sm,
+        borderWidth: 1,
+        minHeight: 36,
+    },
+    changePhotoBtnText: { fontSize: FONT_SIZE.sm },
+
+    proofActions: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center' },
+    uploadedBadge: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
+        padding: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+    },
+    uploadedText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },
+    uploadBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.sm,
+        paddingVertical: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        minHeight: 44,
+    },
+    uploadBtnText: { color: '#fff', fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+    removeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1,
+        minHeight: 44,
+    },
+    removeBtnText: { fontSize: FONT_SIZE.sm },
+
     // Instructions
     stepRow: {
         flexDirection: 'row',
@@ -716,4 +1068,66 @@ const styles = StyleSheet.create({
     },
     stepNumText: { fontSize: 11, fontWeight: FONT_WEIGHT.bold },
     stepText: { flex: 1, fontSize: FONT_SIZE.sm, lineHeight: 20 },
+});
+
+// ── Preview modal styles ──────────────────────────────────────────────────────
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+
+const previewStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.96)',
+        justifyContent: 'space-between',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: SPACING.lg,
+        paddingTop: Platform.OS === 'ios' ? 56 : (StatusBar.currentHeight ?? 24) + 12,
+        paddingBottom: SPACING.md,
+    },
+    headerTitle: {
+        color: '#fff',
+        fontSize: FONT_SIZE.lg,
+        fontWeight: FONT_WEIGHT.semibold,
+    },
+    closeBtn: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    imageWrap: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fullImage: {
+        width: SCREEN_W,
+        height: SCREEN_H * 0.72,
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: SPACING.md,
+        paddingHorizontal: SPACING.xl,
+        paddingVertical: SPACING.xl,
+        paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
+    },
+    footerBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.sm,
+        paddingVertical: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        minHeight: 48,
+    },
+    footerBtnText: {
+        color: '#fff',
+        fontSize: FONT_SIZE.md,
+        fontWeight: FONT_WEIGHT.semibold,
+    },
 });

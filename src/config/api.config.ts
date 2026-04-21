@@ -40,10 +40,16 @@ export const ENDPOINTS = {
         UPDATE_STATUS: (id: number) => `/client/booking-equipments/${id}/status`,
         DELETE: (id: number) => `/client/booking-equipments/${id}`,
     },
+    // Files
+    FILES: {
+        UPLOAD: '/files/upload',
+    },
     // Payments
     PAYMENTS: {
         CREATE: '/client/payments',
         QR: (paymentCode: string) => `/client/payments/${paymentCode}/qr`,
+        /** Lấy payment PENDING theo bookingId — phục hồi QR khi reload */
+        PENDING_BY_BOOKING: (bookingId: number) => `/client/payments/booking/${bookingId}`,
         ATTACH_PROOF: (paymentId: number) => `/client/payments/${paymentId}/proof`,
         MY: '/client/payments',
     },
