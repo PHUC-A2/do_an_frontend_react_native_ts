@@ -566,14 +566,20 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
     );
 
     const slotRows = useMemo<(DisplaySlot | null)[][]>(() => {
+        // Ẩn slot "Đã qua" chỉ khi đang xem ngày hôm nay
+        const isViewingToday = toDateParam(selectedDate) === toDateParam(today);
+        const visible = isViewingToday
+            ? displaySlots.filter(s => s.status !== 'PAST')
+            : displaySlots;
+
         const rows: (DisplaySlot | null)[][] = [];
-        for (let i = 0; i < displaySlots.length; i += 2) {
-            const row: (DisplaySlot | null)[] = [...displaySlots.slice(i, i + 2)];
+        for (let i = 0; i < visible.length; i += 2) {
+            const row: (DisplaySlot | null)[] = [...visible.slice(i, i + 2)];
             while (row.length < 2) row.push(null);
             rows.push(row);
         }
         return rows;
-    }, [displaySlots]);
+    }, [displaySlots, selectedDate, today]);
 
     // Pulse animation for FREE slots
     const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -841,7 +847,11 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
                         ) : slotRows.length === 0 ? (
                             <View style={{ paddingVertical: 40, alignItems: 'center', gap: SPACING.md }}>
                                 <Ionicons name="calendar-outline" size={40} color={colors.textHint} />
-                                <Text style={{ color: colors.textSecondary, fontSize: FONT_SIZE.sm }}>Không có dữ liệu lịch</Text>
+                                <Text style={{ color: colors.textSecondary, fontSize: FONT_SIZE.sm }}>
+                                    {toDateParam(selectedDate) === toDateParam(today)
+                                        ? 'Hôm nay không còn khung giờ nào'
+                                        : 'Không có dữ liệu lịch'}
+                                </Text>
                             </View>
                         ) : (
                             <Animated.View style={{ opacity: fadeAnim }}>
