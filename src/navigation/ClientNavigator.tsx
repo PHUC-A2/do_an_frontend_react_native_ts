@@ -22,6 +22,7 @@ import PitchDetailScreen from '@screens/client/PitchDetailScreen';
 import BookingTimelineScreen from '@screens/client/BookingTimelineScreen';
 import CreateBookingScreen from '@screens/client/CreateBookingScreen';
 import BookingDetailScreen from '@screens/client/BookingDetailScreen';
+import UpdateBookingScreen from '@screens/client/UpdateBookingScreen';
 import PaymentQRScreen from '@screens/client/PaymentQRScreen';
 import EditProfileScreen from '@screens/client/EditProfileScreen';
 import AuthNavigator from './AuthNavigator';
@@ -110,6 +111,14 @@ export default function ClientNavigator() {
                     {(props) => (
                         <View style={{ flex: 1 }}>
                             <BookingDetailScreen {...props} />
+                            <ClientBottomDock />
+                        </View>
+                    )}
+                </Stack.Screen>
+                <Stack.Screen name="UpdateBooking" options={{ title: 'Cập nhật lịch đặt' }}>
+                    {(props) => (
+                        <View style={{ flex: 1 }}>
+                            <UpdateBookingScreen {...props} />
                             <ClientBottomDock />
                         </View>
                     )}

@@ -8,6 +8,7 @@ import {
     ResPitchTimelineDTO,
 } from '@/types/booking.types';
 import { ResBookingEquipmentDTO, ReqUpdateBookingEquipmentStatusDTO } from '@/types/bookingEquipment.types';
+import { ResPitchEquipmentDTO } from '@/types/pitchEquipment.types';
 import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
 
 export const bookingService = {
@@ -33,6 +34,9 @@ export const bookingService = {
     updateBooking: (id: number, data: ReqUpdateBookingDTO) =>
         api.patch<RestResponse<ResBookingDTO>>(ENDPOINTS.BOOKINGS.UPDATE(id), data),
 
+    updateBookingClient: (id: number, data: ReqUpdateBookingDTO) =>
+        api.put<RestResponse<ResBookingDTO>>(ENDPOINTS.BOOKINGS.UPDATE_CLIENT(id), data),
+
     getPitchTimeline: (pitchId: number, date: string) =>
         api.get<RestResponse<ResPitchTimelineDTO>>(ENDPOINTS.PITCHES.TIMELINE(pitchId), {
             params: { date },
@@ -50,4 +54,21 @@ export const bookingService = {
 
     deleteBookingEquipment: (id: number) =>
         api.delete<RestResponse<void>>(ENDPOINTS.BOOKING_EQUIPMENT.DELETE(id)),
+
+    borrowEquipment: (data: {
+        bookingId: number;
+        equipmentId: number;
+        quantity: number;
+        equipmentMobility: string;
+        borrowConditionNote?: string;
+        borrowConditionAcknowledged?: boolean;
+        borrowReportPrintOptIn?: boolean;
+    }) =>
+        api.post<RestResponse<ResBookingEquipmentDTO>>(ENDPOINTS.BOOKING_EQUIPMENT.CREATE, data),
+
+    getPitchEquipments: (pitchId: number) =>
+        api.get<RestResponse<ResPitchEquipmentDTO[]>>(ENDPOINTS.PITCH_EQUIPMENT.ALL(pitchId)),
+
+    getPitchBorrowableEquipments: (pitchId: number) =>
+        api.get<RestResponse<ResPitchEquipmentDTO[]>>(ENDPOINTS.PITCH_EQUIPMENT.BORROWABLE(pitchId)),
 };

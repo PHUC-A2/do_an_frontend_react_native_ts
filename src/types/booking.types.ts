@@ -16,8 +16,10 @@ export interface ReqCreateBookingDTO {
 }
 
 export interface ReqUpdateBookingDTO {
-    status: BookingStatus;
-    note?: string;
+    pitchId: number;
+    startDateTime: string; // ISO datetime "2026-04-11T07:00:00"
+    endDateTime: string;
+    contactPhone?: string;
 }
 
 export interface ResBookingDTO {

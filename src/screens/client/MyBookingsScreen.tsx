@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
@@ -763,6 +763,15 @@ export default function MyBookingsScreen() {
         }
     }, [isAuthenticated, loadBookings, loadEquipments]);
 
+    // Tự refresh khi quay lại màn hình (ví dụ sau khi cập nhật lịch đặt)
+    useFocusEffect(
+        useCallback(() => {
+            if (isAuthenticated) {
+                loadBookings();
+            }
+        }, [isAuthenticated, loadBookings])
+    );
+
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await Promise.all([loadBookings(), loadEquipments()]);
@@ -849,8 +858,8 @@ export default function MyBookingsScreen() {
         navigation.navigate('PaymentQR', { bookingId: id });
     };
 
-    const handleEdit = (_bookingId: number, pitchId: number) => {
-        navigation.navigate('BookingTimeline', { pitchId });
+    const handleEdit = (bookingId: number, pitchId: number) => {
+        navigation.navigate('UpdateBooking', { bookingId, pitchId });
     };
 
     const handleDeleteEquip = (id: number) => {

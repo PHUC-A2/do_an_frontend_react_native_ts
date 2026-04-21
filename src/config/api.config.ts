@@ -32,6 +32,7 @@ export const ENDPOINTS = {
         DELETE: (id: number) => `/client/bookings/${id}`,
         ALL: '/bookings',
         UPDATE: (id: number) => `/bookings/${id}`,
+        UPDATE_CLIENT: (id: number) => `/client/bookings/${id}`,
     },
     // Booking Equipment (client)
     BOOKING_EQUIPMENT: {
@@ -39,6 +40,12 @@ export const ENDPOINTS = {
         BY_BOOKING: (bookingId: number) => `/client/booking-equipments/booking/${bookingId}`,
         UPDATE_STATUS: (id: number) => `/client/booking-equipments/${id}/status`,
         DELETE: (id: number) => `/client/booking-equipments/${id}`,
+        CREATE: '/client/booking-equipments',
+    },
+    // Pitch Equipment (public)
+    PITCH_EQUIPMENT: {
+        ALL: (pitchId: number) => `/client/public/pitches/${pitchId}/pitch-equipments`,
+        BORROWABLE: (pitchId: number) => `/client/public/pitches/${pitchId}/pitch-equipments/borrowable`,
     },
     // Files
     FILES: {

@@ -26,6 +26,7 @@ export type ClientStackParamList = {
     PitchDetail: { pitchId: number };
     BookingTimeline: { pitchId: number };
     CreateBooking: { pitchId: number; startTime: string; endTime: string };
+    UpdateBooking: { bookingId: number; pitchId: number };
     BookingDetail: { bookingId: number };
     PaymentQR: { bookingId: number };
     ReviewCreate: { targetType: 'PITCH' | 'EQUIPMENT'; targetId: number; targetName: string };
