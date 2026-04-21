@@ -15,6 +15,7 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -279,7 +280,8 @@ const BookingCard = React.memo(({
     const canPay    = isActive;
     const canUpdate = (isActive || isPending) && !isEnded && !isPaid;
     const canCancel = (isActive || isPending) && !isEnded && !isPaid;
-    const canDelete = isPaid || isCancelled || isEnded;
+    // Chỉ cho xóa khi đã thanh toán hoặc đã huỷ — không cho xóa khi admin chưa duyệt thanh toán
+    const canDelete = isPaid || isCancelled;
 
     const statusMeta = getStatusColor(item.status);
     const isBusy = actionLoading === item.id;
@@ -377,38 +379,61 @@ const BookingCard = React.memo(({
                 {expanded && (
                     <View style={[styles.expandedWrap, { borderTopColor: colors.divider }]}>
 
-                        {/* Người đặt */}
-                        <View style={styles.detailRow}>
-                            <Ionicons name="person-outline" size={14} color={colors.textHint} />
-                            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Người đặt:</Text>
-                            <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{item.userName}</Text>
-                        </View>
+                        {/* ── Detail rows – label trái / value phải ── */}
+                        <View style={[styles.infoBox, { backgroundColor: colors.surfaceVariant }]}>
 
-                        {/* Liên hệ */}
-                        {item.contactPhone ? (
-                            <View style={styles.detailRow}>
-                                <Ionicons name="call-outline" size={14} color={colors.textHint} />
-                                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Liên hệ:</Text>
-                                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{item.contactPhone}</Text>
+                            {/* Người đặt */}
+                            <View style={[styles.detailRow, { borderBottomColor: colors.divider }]}>
+                                <View style={styles.detailLeft}>
+                                    <Ionicons name="person-outline" size={13} color={colors.textHint} />
+                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Người đặt</Text>
+                                </View>
+                                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{item.userName}</Text>
                             </View>
-                        ) : null}
 
-                        {/* Thời lượng */}
-                        <View style={styles.detailRow}>
-                            <Ionicons name="hourglass-outline" size={14} color={colors.textHint} />
-                            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Thời lượng:</Text>
-                            <Text style={[styles.detailValue, { color: colors.textPrimary }]}>
-                                {durationLabel(item.startDateTime, item.endDateTime, item.durationMinutes)}
-                            </Text>
-                        </View>
+                            {/* Liên hệ – có nút copy */}
+                            {item.contactPhone ? (
+                                <View style={[styles.detailRow, { borderBottomColor: colors.divider }]}>
+                                    <View style={styles.detailLeft}>
+                                        <Ionicons name="call-outline" size={13} color={colors.textHint} />
+                                        <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Liên hệ</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.copyRow}
+                                        onPress={async () => {
+                                            const phone = item.contactPhone ?? '';
+                                            await Clipboard.setStringAsync(phone);
+                                            Alert.alert('Đã sao chép', phone);
+                                        }}
+                                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                    >
+                                        <Text style={[styles.detailValue, { color: colors.primary }]} numberOfLines={1}>{item.contactPhone}</Text>
+                                        <Ionicons name="copy-outline" size={13} color={colors.primary} />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : null}
 
-                        {/* Tổng tiền */}
-                        <View style={[styles.detailRow, { marginTop: 2 }]}>
-                            <Ionicons name="cash-outline" size={14} color={colors.textHint} />
-                            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Tổng tiền:</Text>
-                            <Text style={[styles.detailValue, { color: colors.primary, fontWeight: FONT_WEIGHT.bold, fontSize: FONT_SIZE.md }]}>
-                                {formatVND(item.totalPrice)}
-                            </Text>
+                            {/* Thời lượng */}
+                            <View style={[styles.detailRow, { borderBottomColor: colors.divider }]}>
+                                <View style={styles.detailLeft}>
+                                    <Ionicons name="hourglass-outline" size={13} color={colors.textHint} />
+                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Thời lượng</Text>
+                                </View>
+                                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>
+                                    {durationLabel(item.startDateTime, item.endDateTime, item.durationMinutes)}
+                                </Text>
+                            </View>
+
+                            {/* Tổng tiền */}
+                            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                                <View style={styles.detailLeft}>
+                                    <Ionicons name="cash-outline" size={13} color={colors.textHint} />
+                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Tổng tiền</Text>
+                                </View>
+                                <Text style={[styles.detailValue, { color: colors.primary, fontWeight: FONT_WEIGHT.bold, fontSize: FONT_SIZE.md }]}>
+                                    {formatVND(item.totalPrice)}
+                                </Text>
+                            </View>
                         </View>
 
                         {/* Thiết bị mượn kèm */}
@@ -511,13 +536,6 @@ const BookingCard = React.memo(({
                                 <View style={[styles.infoChip, { backgroundColor: '#FEF3C7' }]}>
                                     <Ionicons name="hourglass-outline" size={12} color="#F59E0B" />
                                     <Text style={[styles.infoChipText, { color: '#F59E0B' }]}>Chờ admin xác nhận</Text>
-                                </View>
-                            )}
-
-                            {isPaid && (
-                                <View style={[styles.infoChip, { backgroundColor: '#DCFCE7' }]}>
-                                    <Ionicons name="checkmark-circle-outline" size={12} color="#16A34A" />
-                                    <Text style={[styles.infoChipText, { color: '#16A34A' }]}>Đã thanh toán</Text>
                                 </View>
                             )}
                         </View>
@@ -1049,9 +1067,15 @@ const styles = StyleSheet.create({
     price: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
 
     expandedWrap: { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1 },
-    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.xs },
-    detailLabel: { fontSize: FONT_SIZE.xs, width: 84 },
-    detailValue: { flex: 1, fontSize: FONT_SIZE.xs },
+
+    // Info box: label trái – value phải
+    infoBox: { borderRadius: BORDER_RADIUS.md, overflow: 'hidden', marginBottom: SPACING.sm },
+    detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
+    detailLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+    detailLabel: { fontSize: FONT_SIZE.xs },
+    detailValue: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium },
+    copyRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+
     tsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1 },
     tsText: { fontSize: 10 },
 
