@@ -260,21 +260,42 @@ const BookingCard = React.memo(({
     const [expanded, setExpanded] = useState(false);
     const rotateAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim  = useRef(new Animated.Value(1)).current;
+    const pulseAnim  = useRef(new Animated.Value(1)).current;
 
-    const now = new Date();
-    const isEnded    = new Date(item.endDateTime) < now;
+    const now        = new Date();
+    const startTime  = new Date(item.startDateTime);
+    const endTime    = new Date(item.endDateTime);
+    const isEnded    = endTime < now;
     const isPending  = item.status === 'PENDING';
     const isActive   = item.status === 'ACTIVE' || item.status === 'CONFIRMED';
     const isPaid     = item.status === 'PAID';
     const isCancelled = item.status === 'CANCELLED';
 
-    const canPay    = isActive && !isEnded;
+    // Đang trong khung giờ đá (bất kể trạng thái backend chưa cập nhật CHECKIN)
+    const isPlaying = startTime <= now && now < endTime
+        && !isCancelled && item.status !== 'NO_SHOW';
+
+    // Bỏ điều kiện !isEnded → lịch sử có booking ACTIVE chưa thanh toán vẫn hiện nút
+    const canPay    = isActive;
     const canUpdate = (isActive || isPending) && !isEnded && !isPaid;
     const canCancel = (isActive || isPending) && !isEnded && !isPaid;
     const canDelete = isPaid || isCancelled || isEnded;
 
     const statusMeta = getStatusColor(item.status);
     const isBusy = actionLoading === item.id;
+
+    // Hiệu ứng nhấp nháy cho "Đang đá"
+    useEffect(() => {
+        if (!isPlaying) return;
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1,   duration: 600, useNativeDriver: true }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [isPlaying]);
 
     const toggleExpand = () => {
         const toValue = expanded ? 0 : 1;
@@ -307,11 +328,19 @@ const BookingCard = React.memo(({
                         </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
-                        <View style={[styles.statusBadge, { backgroundColor: statusMeta.bg }]}>
-                            <Text style={[styles.statusText, { color: statusMeta.text }]}>
-                                {BOOKING_STATUS_LABEL[item.status] ?? item.status}
-                            </Text>
-                        </View>
+                        {isPlaying ? (
+                            /* Badge "Đang đá" nhấp nháy */
+                            <View style={[styles.statusBadge, styles.playingBadge]}>
+                                <Animated.View style={[styles.playingDot, { opacity: pulseAnim }]} />
+                                <Text style={[styles.statusText, styles.playingText]}>Đang đá</Text>
+                            </View>
+                        ) : (
+                            <View style={[styles.statusBadge, { backgroundColor: statusMeta.bg }]}>
+                                <Text style={[styles.statusText, { color: statusMeta.text }]}>
+                                    {BOOKING_STATUS_LABEL[item.status] ?? item.status}
+                                </Text>
+                            </View>
+                        )}
                         <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
                             <Ionicons name="chevron-down" size={16} color={colors.textHint} />
                         </Animated.View>
@@ -320,8 +349,8 @@ const BookingCard = React.memo(({
 
                 {/* Time */}
                 <View style={styles.metaRow}>
-                    <Ionicons name="time-outline" size={14} color={colors.textHint} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                    <Ionicons name="time-outline" size={14} color={isPlaying ? '#16A34A' : colors.textHint} />
+                    <Text style={[styles.metaText, { color: isPlaying ? '#16A34A' : colors.textSecondary, fontWeight: isPlaying ? FONT_WEIGHT.semibold : FONT_WEIGHT.regular }]}>
                         {formatTime(item.startDateTime)} → {formatTime(item.endDateTime)}
                     </Text>
                     <Text style={[styles.metaDot, { color: colors.textHint }]}>·</Text>
@@ -730,7 +759,13 @@ export default function MyBookingsScreen() {
         for (const b of myBookings) {
             if (b.deletedByUser) continue;
             const isEnded = new Date(b.endDateTime) < now;
-            (isEnded || b.status === 'CANCELLED') ? history.push(b) : upcoming.push(b);
+            const isCancelled = b.status === 'CANCELLED';
+            // Booking ACTIVE/CONFIRMED chưa thanh toán mà đã qua giờ → vào lịch sử nhưng vẫn có nút thanh toán
+            if (isEnded || isCancelled) {
+                history.push(b);
+            } else {
+                upcoming.push(b);
+            }
         }
         upcoming.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
         history.sort((a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime());
@@ -793,7 +828,7 @@ export default function MyBookingsScreen() {
     };
 
     const handlePay = (id: number) => {
-        navigation.navigate('BookingDetail', { bookingId: id });
+        navigation.navigate('PaymentQR', { bookingId: id });
     };
 
     const handleEdit = (_bookingId: number, pitchId: number) => {
@@ -1004,6 +1039,9 @@ const styles = StyleSheet.create({
     iconWrap: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
     statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: BORDER_RADIUS.full },
     statusText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold },
+    playingBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#DCFCE7', paddingHorizontal: SPACING.sm, paddingVertical: 3 },
+    playingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' },
+    playingText: { color: '#15803D', fontWeight: FONT_WEIGHT.bold },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.xs },
     metaText: { fontSize: FONT_SIZE.xs },
     metaDot: { fontSize: FONT_SIZE.xs, marginHorizontal: 2 },
