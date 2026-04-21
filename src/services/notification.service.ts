@@ -13,4 +13,10 @@ export const notificationService = {
 
     markAllAsRead: () =>
         api.patch<RestResponse<null>>(ENDPOINTS.NOTIFICATIONS.READ_ALL),
+
+    deleteOne: (id: number) =>
+        api.delete<RestResponse<null>>(ENDPOINTS.NOTIFICATIONS.DELETE(id)),
+
+    deleteAll: () =>
+        api.delete<RestResponse<null>>(ENDPOINTS.NOTIFICATIONS.CLEAR),
 };

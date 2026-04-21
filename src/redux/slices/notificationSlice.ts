@@ -28,6 +28,15 @@ export const markAllReadAsync = createAsyncThunk('notification/markAllRead', asy
     await notificationService.markAllAsRead();
 });
 
+export const deleteNotificationAsync = createAsyncThunk('notification/deleteOne', async (id: number) => {
+    await notificationService.deleteOne(id);
+    return id;
+});
+
+export const deleteAllNotificationsAsync = createAsyncThunk('notification/deleteAll', async () => {
+    await notificationService.deleteAll();
+});
+
 const notificationSlice = createSlice({
     name: 'notification',
     initialState,
@@ -63,6 +72,14 @@ const notificationSlice = createSlice({
             })
             .addCase(markAllReadAsync.fulfilled, (state) => {
                 state.notifications.forEach((n) => (n.isRead = true));
+                state.unreadCount = 0;
+            })
+            .addCase(deleteNotificationAsync.fulfilled, (state, action) => {
+                state.notifications = state.notifications.filter((n) => n.id !== action.payload);
+                state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
+            })
+            .addCase(deleteAllNotificationsAsync.fulfilled, (state) => {
+                state.notifications = [];
                 state.unreadCount = 0;
             });
     },

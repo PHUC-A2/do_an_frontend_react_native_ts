@@ -65,6 +65,8 @@ export const ENDPOINTS = {
         MY: '/client/notifications',
         READ: (id: number) => `/client/notifications/${id}/read`,
         READ_ALL: '/client/notifications/read-all',
+        DELETE: (id: number) => `/client/notifications/${id}`,
+        CLEAR: '/client/notifications/clear',
     },
     // Equipment
     EQUIPMENT: {

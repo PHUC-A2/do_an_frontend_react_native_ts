@@ -22,7 +22,7 @@ export type ClientTabParamList = {
 
 // ---- Client Stack (wraps tabs + detail screens) ----
 export type ClientStackParamList = {
-    ClientTabs: undefined;
+    ClientTabs: NavigatorScreenParams<ClientTabParamList> | undefined;
     PitchDetail: { pitchId: number };
     BookingTimeline: { pitchId: number };
     CreateBooking: { pitchId: number; startTime: string; endTime: string };

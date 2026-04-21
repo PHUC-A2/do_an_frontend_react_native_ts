@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import './src/i18n';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,15 +33,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </Provider>
+    </GestureHandlerRootView>
   );
 }
 
