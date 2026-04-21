@@ -14,6 +14,13 @@ export interface ResBookingEquipmentDTO {
     penaltyAmount: number;
     borrowConditionNote: string | null;
     returnConditionNote: string | null;
+    borrowerSignName?: string | null;
+    staffSignName?: string | null;
+    returnerNameSnapshot?: string | null;
+    returnerPhoneSnapshot?: string | null;
+    returnReportPrintOptIn?: boolean | null;
+    receiverNameSnapshot?: string | null;
+    receiverPhoneSnapshot?: string | null;
     deletedByClient: boolean;
     createdAt: string;
     updatedAt: string;
@@ -25,4 +32,11 @@ export interface ReqUpdateBookingEquipmentStatusDTO {
     quantityLost?: number;
     quantityDamaged?: number;
     returnConditionNote?: string;
+    borrowerSignName?: string | null;
+    staffSignName?: string | null;
+    returnerName?: string | null;
+    returnerPhone?: string | null;
+    receiverName?: string | null;
+    receiverPhone?: string | null;
+    returnReportPrintOptIn?: boolean | null;
 }

@@ -16,6 +16,7 @@ import {
     Platform,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -63,6 +64,10 @@ function durationLabel(startISO: string, endISO: string, durationMinutes?: numbe
     return `${m} phút`;
 }
 
+function hasUnreturnedEquipments(equips: ResBookingEquipmentDTO[]): boolean {
+    return equips.some((equip) => !equip.deletedByClient && equip.status === 'BORROWED');
+}
+
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 type TabKey = 'upcoming' | 'history' | 'equipment';
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -89,6 +94,10 @@ const ReturnModal = ({ visible, equip, preset, loading, onClose, onSubmit }: Ret
     const [qtyLost, setQtyLost] = useState('');
     const [qtyDamaged, setQtyDamaged] = useState('');
     const [returnNote, setReturnNote] = useState('');
+    const [returnerName, setReturnerName] = useState('');
+    const [returnerPhone, setReturnerPhone] = useState('');
+    const [receiverName, setReceiverName] = useState('');
+    const [receiverPhone, setReceiverPhone] = useState('');
 
     useEffect(() => {
         if (equip && visible) {
@@ -106,6 +115,10 @@ const ReturnModal = ({ visible, equip, preset, loading, onClose, onSubmit }: Ret
                 setQtyDamaged(String(equip.quantity));
             }
             setReturnNote('');
+            setReturnerName('');
+            setReturnerPhone('');
+            setReceiverName('');
+            setReceiverPhone('');
         }
     }, [equip, preset, visible]);
 
@@ -125,12 +138,23 @@ const ReturnModal = ({ visible, equip, preset, loading, onClose, onSubmit }: Ret
             Alert.alert('Lỗi', `Tổng số lượng phải bằng ${equip.quantity}`);
             return;
         }
+        if (!receiverName.trim() || !receiverPhone.trim()) {
+            Alert.alert('Lỗi', 'Vui lòng nhập họ tên và số điện thoại người nhận thiết bị tại sân.');
+            return;
+        }
         onSubmit({
             status: presetMeta.status,
             quantityReturnedGood: parseInt(qtyGood) || 0,
             quantityLost: parseInt(qtyLost) || 0,
             quantityDamaged: parseInt(qtyDamaged) || 0,
             returnConditionNote: returnNote.trim() || undefined,
+            borrowerSignName: null,
+            staffSignName: null,
+            returnerName: returnerName.trim() || null,
+            returnerPhone: returnerPhone.trim() || null,
+            receiverName: receiverName.trim(),
+            receiverPhone: receiverPhone.trim(),
+            returnReportPrintOptIn: null,
             returnNote,
         });
     };
@@ -196,16 +220,58 @@ const ReturnModal = ({ visible, equip, preset, loading, onClose, onSubmit }: Ret
                             {/* Return note */}
                             <View style={{ gap: SPACING.xs }}>
                                 <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                                    Ghi chú tình trạng khi trả (tuỳ chọn)
+                                    Ghi chú biên bản khi trả (tình trạng nhận lại)
                                 </Text>
                                 <TextInput
                                     style={[styles.noteInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
                                     value={returnNote}
                                     onChangeText={setReturnNote}
-                                    placeholder="Nhập ghi chú..."
+                                    placeholder="VD: đủ phụ kiện, có trầy nhẹ..."
                                     placeholderTextColor={colors.textHint}
                                     multiline
                                     numberOfLines={3}
+                                />
+                            </View>
+
+                            <View style={{ gap: SPACING.xs }}>
+                                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                                    Người trả thực tế (để trống = người đặt sân)
+                                </Text>
+                                <TextInput
+                                    style={[styles.singleLineInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+                                    value={returnerName}
+                                    onChangeText={setReturnerName}
+                                    placeholder="Họ tên người giao trả"
+                                    placeholderTextColor={colors.textHint}
+                                />
+                                <TextInput
+                                    style={[styles.singleLineInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+                                    value={returnerPhone}
+                                    onChangeText={setReturnerPhone}
+                                    placeholder="Số điện thoại người trả (tùy chọn)"
+                                    placeholderTextColor={colors.textHint}
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+
+                            <View style={{ gap: SPACING.xs }}>
+                                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                                    Người nhận thiết bị tại sân (nhân viên / bên giao nhận - bắt buộc)
+                                </Text>
+                                <TextInput
+                                    style={[styles.singleLineInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+                                    value={receiverName}
+                                    onChangeText={setReceiverName}
+                                    placeholder="Họ tên người nhận"
+                                    placeholderTextColor={colors.textHint}
+                                />
+                                <TextInput
+                                    style={[styles.singleLineInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+                                    value={receiverPhone}
+                                    onChangeText={setReceiverPhone}
+                                    placeholder="Số điện thoại người nhận"
+                                    placeholderTextColor={colors.textHint}
+                                    keyboardType="phone-pad"
                                 />
                             </View>
                         </ScrollView>
@@ -248,14 +314,15 @@ interface BookingCardProps {
     equips: ResBookingEquipmentDTO[];
     actionLoading: number | null;
     onViewDetail: (id: number) => void;
+    onViewEquipment: (equipmentId: number) => void;
     onEdit: (id: number, pitchId: number) => void;
     onCancel: (id: number) => void;
-    onDelete: (id: number) => void;
+    onDelete: (booking: ResBookingDTO, equips: ResBookingEquipmentDTO[]) => void;
     onPay: (id: number) => void;
 }
 
 const BookingCard = React.memo(({
-    item, equips, actionLoading, onViewDetail, onEdit, onCancel, onDelete, onPay,
+    item, equips, actionLoading, onViewDetail, onViewEquipment, onEdit, onCancel, onDelete, onPay,
 }: BookingCardProps) => {
     const { colors, isDark } = useTheme();
     const [expanded, setExpanded] = useState(false);
@@ -271,6 +338,7 @@ const BookingCard = React.memo(({
     const isActive   = item.status === 'ACTIVE' || item.status === 'CONFIRMED';
     const isPaid     = item.status === 'PAID';
     const isCancelled = item.status === 'CANCELLED';
+    const hasBorrowedEquipment = hasUnreturnedEquipments(equips);
 
     // Đang trong khung giờ đá (bất kể trạng thái backend chưa cập nhật CHECKIN)
     const isPlaying = startTime <= now && now < endTime
@@ -280,8 +348,8 @@ const BookingCard = React.memo(({
     const canPay    = isActive;
     const canUpdate = (isActive || isPending) && !isEnded && !isPaid;
     const canCancel = (isActive || isPending) && !isEnded && !isPaid;
-    // Chỉ cho xóa khi đã thanh toán hoặc đã huỷ — không cho xóa khi admin chưa duyệt thanh toán
-    const canDelete = isPaid || isCancelled;
+    const canDeleteBase = isPaid || isCancelled;
+    const canDelete = canDeleteBase && !hasBorrowedEquipment;
 
     const statusMeta = getStatusColor(item.status);
     const isBusy = actionLoading === item.id;
@@ -452,7 +520,12 @@ const BookingCard = React.memo(({
                                 equips.map(eq => {
                                     const meta = BOOKING_EQUIPMENT_STATUS_META[eq.status];
                                     return (
-                                        <View key={eq.id} style={[styles.equipChip, { backgroundColor: colors.surfaceVariant }]}>
+                                        <TouchableOpacity
+                                            key={eq.id}
+                                            activeOpacity={0.82}
+                                            onPress={() => onViewEquipment(eq.id)}
+                                            style={[styles.equipChip, { backgroundColor: colors.surfaceVariant }]}
+                                        >
                                             <Text style={[styles.equipName, { color: colors.textPrimary }]}>{eq.equipmentName}</Text>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
                                                 <Text style={[styles.equipQty, { color: colors.textSecondary }]}>SL: {eq.quantity}</Text>
@@ -460,7 +533,7 @@ const BookingCard = React.memo(({
                                                     <Text style={[styles.equipBadgeText, { color: meta.color }]}>{meta.label}</Text>
                                                 </View>
                                             </View>
-                                        </View>
+                                        </TouchableOpacity>
                                     );
                                 })
                             )}
@@ -513,7 +586,7 @@ const BookingCard = React.memo(({
                             {canDelete && (
                                 <TouchableOpacity
                                     style={[styles.actionBtn, { borderColor: colors.border }]}
-                                    onPress={() => onDelete(item.id)}
+                                    onPress={() => onDelete(item, equips)}
                                     disabled={isBusy}
                                 >
                                     <Ionicons name="trash-outline" size={14} color={colors.textHint} />
@@ -538,6 +611,13 @@ const BookingCard = React.memo(({
                                     <Text style={[styles.infoChipText, { color: '#F59E0B' }]}>Chờ admin xác nhận</Text>
                                 </View>
                             )}
+
+                            {canDeleteBase && hasBorrowedEquipment && (
+                                <View style={[styles.infoChip, { backgroundColor: '#FEF3C7' }]}>
+                                    <Ionicons name="construct-outline" size={12} color="#F59E0B" />
+                                    <Text style={[styles.infoChipText, { color: '#F59E0B' }]}>Phải trả thiết bị trước khi xóa</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 )}
@@ -551,19 +631,49 @@ interface EquipmentCardProps {
     item: ResBookingEquipmentDTO;
     deletingId: number | null;
     updatingId: number | null;
-    onDelete: (id: number) => void;
+    isHighlighted: boolean;
+    onDelete: (item: ResBookingEquipmentDTO) => void;
+    onViewBooking: (bookingId: number) => void;
     onReturn: (item: ResBookingEquipmentDTO, preset: ReturnPreset) => void;
 }
 
-const EquipmentCard = React.memo(({ item, deletingId, updatingId, onDelete, onReturn }: EquipmentCardProps) => {
+const EquipmentCard = React.memo(({ item, deletingId, updatingId, isHighlighted, onDelete, onViewBooking, onReturn }: EquipmentCardProps) => {
     const { colors, isDark } = useTheme();
     const meta = BOOKING_EQUIPMENT_STATUS_META[item.status];
     const isDeleting = deletingId === item.id;
     const isUpdating = updatingId === item.id;
     const shadowStyle = isDark ? {} : SHADOW.sm;
+    const canSwipeDelete = item.status !== 'BORROWED';
 
-    return (
-        <View style={[styles.equipCard, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}>
+    const renderDeleteAction = () => (
+        <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => onDelete(item)}
+            style={[styles.deleteAction, { backgroundColor: colors.danger }]}
+        >
+            {isDeleting ? (
+                <ActivityIndicator size="small" color="#fff" />
+            ) : (
+                <>
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={styles.deleteActionText}>Xóa</Text>
+                </>
+            )}
+        </TouchableOpacity>
+    );
+
+    const cardContent = (
+        <View
+            style={[
+                styles.equipCard,
+                {
+                    backgroundColor: colors.surface,
+                    borderColor: isHighlighted ? colors.primary : colors.border,
+                    ...(isHighlighted ? styles.equipCardHighlight : null),
+                    ...shadowStyle,
+                },
+            ]}
+        >
             {/* Header */}
             <View style={styles.equipCardHeader}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
@@ -636,6 +746,14 @@ const EquipmentCard = React.memo(({ item, deletingId, updatingId, onDelete, onRe
                 {item.status === 'BORROWED' ? (
                     <View style={styles.actionRow}>
                         <TouchableOpacity
+                            style={[styles.actionBtn, { borderColor: colors.border }]}
+                            onPress={() => onViewBooking(item.bookingId)}
+                            disabled={isUpdating}
+                        >
+                            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+                            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>Xem lịch đặt</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
                             style={[styles.actionBtnPrimary, { backgroundColor: colors.primary }]}
                             onPress={() => onReturn(item, 'full')}
                             disabled={isUpdating}
@@ -665,22 +783,34 @@ const EquipmentCard = React.memo(({ item, deletingId, updatingId, onDelete, onRe
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: colors.border }]}
-                        onPress={() => onDelete(item.id)}
-                        disabled={isDeleting}
-                    >
-                        {isDeleting ? (
-                            <ActivityIndicator size="small" color={colors.textHint} />
-                        ) : (
-                            <>
-                                <Ionicons name="trash-outline" size={13} color={colors.textHint} />
-                                <Text style={[styles.actionBtnText, { color: colors.textHint }]}>Xóa khỏi danh sách</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                    <View style={{ gap: SPACING.sm }}>
+                        <TouchableOpacity
+                            style={[styles.actionBtn, { borderColor: colors.border, alignSelf: 'flex-start' }]}
+                            onPress={() => onViewBooking(item.bookingId)}
+                            disabled={isDeleting}
+                        >
+                            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+                            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>Xem lịch đặt</Text>
+                        </TouchableOpacity>
+                        <View style={[styles.swipeHint, { backgroundColor: colors.surfaceVariant }]}>
+                            <Ionicons name="swap-horizontal-outline" size={14} color={colors.textHint} />
+                            <Text style={[styles.swipeHintText, { color: colors.textSecondary }]}>Vuốt sang trái để xóa khỏi lịch sử</Text>
+                        </View>
+                    </View>
                 )}
             </View>
+        </View>
+    );
+
+    if (!canSwipeDelete) {
+        return cardContent;
+    }
+
+    return (
+        <View style={styles.swipeRow}>
+            <Swipeable overshootRight={false} renderRightActions={renderDeleteAction}>
+                {cardContent}
+            </Swipeable>
         </View>
     );
 });
@@ -717,10 +847,14 @@ export default function MyBookingsScreen() {
 
     const [activeTab, setActiveTab] = useState<TabKey>('upcoming');
     const [refreshing, setRefreshing] = useState(false);
+    const [tabBarWidth, setTabBarWidth] = useState(0);
+    const [targetEquipmentId, setTargetEquipmentId] = useState<number | null>(null);
+    const [highlightedEquipmentId, setHighlightedEquipmentId] = useState<number | null>(null);
 
     // All my equipments (used by both tabs 1/2 inline + tab 3)
     const [allMyEquips, setAllMyEquips] = useState<ResBookingEquipmentDTO[]>([]);
     const [equipLoading, setEquipLoading] = useState(false);
+    const equipmentListRef = useRef<FlatList<ResBookingEquipmentDTO>>(null);
 
     // Actions
     const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -845,6 +979,25 @@ export default function MyBookingsScreen() {
     // Tab 3 — only BORROWED or non-deleted
     const equipList = useMemo(() => allMyEquips, [allMyEquips]);
 
+    useEffect(() => {
+        if (activeTab !== 'equipment' || equipLoading || targetEquipmentId == null) return;
+        const targetItem = equipList.find((item) => item.id === targetEquipmentId);
+        if (!targetItem) return;
+
+        const timer = setTimeout(() => {
+            equipmentListRef.current?.scrollToItem({ item: targetItem, animated: true, viewPosition: 0.15 });
+            setHighlightedEquipmentId(targetEquipmentId);
+        }, 120);
+
+        return () => clearTimeout(timer);
+    }, [activeTab, equipLoading, equipList, targetEquipmentId]);
+
+    useEffect(() => {
+        if (highlightedEquipmentId == null) return;
+        const timer = setTimeout(() => setHighlightedEquipmentId(null), 1800);
+        return () => clearTimeout(timer);
+    }, [highlightedEquipmentId]);
+
     // ─── Actions ─────────────────────────────────────────────────────────
     const handleCancel = (id: number) => {
         Alert.alert('Hủy đặt sân', 'Bạn có chắc muốn hủy lịch đặt này không?', [
@@ -866,15 +1019,19 @@ export default function MyBookingsScreen() {
         ]);
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (booking: ResBookingDTO, equips: ResBookingEquipmentDTO[]) => {
+        if (hasUnreturnedEquipments(equips)) {
+            Alert.alert('Chưa thể xóa', 'Bạn cần trả hết thiết bị mượn trước khi xóa lịch sử booking.');
+            return;
+        }
         Alert.alert('Xóa lịch sử', 'Bạn có muốn xóa lịch đặt này khỏi danh sách không?', [
             { text: 'Không', style: 'cancel' },
             {
                 text: 'Xóa', style: 'destructive',
                 onPress: async () => {
-                    setActionLoading(id);
+                    setActionLoading(booking.id);
                     try {
-                        await bookingService.deleteBooking(id);
+                        await bookingService.deleteBooking(booking.id);
                         await dispatch(fetchMyBookings());
                     } catch (e: any) {
                         Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không thể xóa');
@@ -894,16 +1051,20 @@ export default function MyBookingsScreen() {
         navigation.navigate('UpdateBooking', { bookingId, pitchId });
     };
 
-    const handleDeleteEquip = (id: number) => {
+    const handleDeleteEquip = (equip: ResBookingEquipmentDTO) => {
+        if (equip.status === 'BORROWED') {
+            Alert.alert('Chưa thể xóa', 'Thiết bị này vẫn đang ở trạng thái mượn. Vui lòng trả thiết bị trước.');
+            return;
+        }
         Alert.alert('Xóa khỏi danh sách', 'Bản ghi sẽ bị xóa khỏi lịch sử của bạn. Admin vẫn lưu trữ.', [
             { text: 'Hủy', style: 'cancel' },
             {
                 text: 'Xóa', style: 'destructive',
                 onPress: async () => {
-                    setDeletingEquipId(id);
+                    setDeletingEquipId(equip.id);
                     try {
-                        await bookingService.deleteBookingEquipment(id);
-                        setAllMyEquips(prev => prev.filter(e => e.id !== id));
+                        await bookingService.deleteBookingEquipment(equip.id);
+                        setAllMyEquips(prev => prev.filter(e => e.id !== equip.id));
                     } catch (e: any) {
                         Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không thể xóa');
                     } finally {
@@ -918,6 +1079,11 @@ export default function MyBookingsScreen() {
         setReturnModal({ equip, preset });
     };
 
+    const handleOpenEquipmentFromBooking = (equipmentId: number) => {
+        setTargetEquipmentId(equipmentId);
+        setActiveTab('equipment');
+    };
+
     const handleSubmitReturn = async (data: ReqUpdateBookingEquipmentStatusDTO & { returnNote: string }) => {
         if (!returnModal) return;
         setUpdatingEquipId(returnModal.equip.id);
@@ -928,6 +1094,13 @@ export default function MyBookingsScreen() {
                 quantityLost: data.quantityLost,
                 quantityDamaged: data.quantityDamaged,
                 returnConditionNote: data.returnConditionNote,
+                borrowerSignName: data.borrowerSignName,
+                staffSignName: data.staffSignName,
+                returnerName: data.returnerName,
+                returnerPhone: data.returnerPhone,
+                receiverName: data.receiverName,
+                receiverPhone: data.receiverPhone,
+                returnReportPrintOptIn: data.returnReportPrintOptIn,
             });
             const updated = res.data.data;
             if (updated) {
@@ -947,37 +1120,46 @@ export default function MyBookingsScreen() {
         return <GuestPrompt icon="calendar-outline" title="Lịch đặt sân" subtitle="Đăng nhập để xem và quản lý các lịch đặt sân của bạn" />;
     }
 
-    const renderBookingItem = ({ item }: { item: ResBookingDTO }) => (
+    const renderBookingItem = ({ item }: { item: ResBookingDTO }) => {
+        const bookingEquips = equipsByBookingId.get(item.id) ?? [];
+        return (
         <BookingCard
             item={item}
-            equips={equipsByBookingId.get(item.id) ?? []}
+            equips={bookingEquips}
             actionLoading={actionLoading}
             onViewDetail={(id) => navigation.navigate('BookingDetail', { bookingId: id })}
+            onViewEquipment={handleOpenEquipmentFromBooking}
             onEdit={handleEdit}
             onCancel={handleCancel}
             onDelete={handleDelete}
             onPay={handlePay}
         />
-    );
+        );
+    };
 
     const renderEquipItem = ({ item }: { item: ResBookingEquipmentDTO }) => (
         <EquipmentCard
             item={item}
             deletingId={deletingEquipId}
             updatingId={updatingEquipId}
+            isHighlighted={highlightedEquipmentId === item.id}
             onDelete={handleDeleteEquip}
+            onViewBooking={(bookingId) => navigation.navigate('BookingDetail', { bookingId })}
             onReturn={handleOpenReturn}
         />
     );
 
     const currentData = activeTab === 'upcoming' ? upcomingBookings : historyBookings;
-    const TAB_W = 100 / TABS.length;
+    const tabWidth = tabBarWidth > 0 ? tabBarWidth / TABS.length : 0;
 
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['left', 'right']}>
 
             {/* Tab bar */}
-            <View style={[styles.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <View
+                style={[styles.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+                onLayout={(event) => setTabBarWidth(event.nativeEvent.layout.width)}
+            >
                 {TABS.map((tab, i) => {
                     const isActive = activeTab === tab.key;
                     const count = i === 0 ? upcomingBookings.length : i === 1 ? historyBookings.length : equipList.length;
@@ -1003,12 +1185,12 @@ export default function MyBookingsScreen() {
                 <Animated.View
                     style={[
                         styles.tabIndicator,
-                        { backgroundColor: colors.primary, width: `${TAB_W}%` },
+                        { backgroundColor: colors.primary, width: tabWidth || undefined },
                         {
                             transform: [{
                                 translateX: tabIndicatorAnim.interpolate({
                                     inputRange: [0, 1, 2],
-                                    outputRange: [0, 100, 200],
+                                    outputRange: [0, tabWidth, tabWidth * 2],
                                 }),
                             }],
                         },
@@ -1052,6 +1234,7 @@ export default function MyBookingsScreen() {
                     />
                 ) : (
                     <FlatList
+                        ref={equipmentListRef}
                         data={equipList}
                         keyExtractor={(item) => String(item.id)}
                         renderItem={renderEquipItem}
@@ -1138,6 +1321,7 @@ const styles = StyleSheet.create({
     infoChipText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium },
 
     equipCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, overflow: 'hidden' },
+    equipCardHighlight: { borderWidth: 1.5 },
     equipCardHeader: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg, paddingBottom: SPACING.sm },
     equipCardBody: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.md },
     equipStatRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
@@ -1150,6 +1334,11 @@ const styles = StyleSheet.create({
     noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginBottom: SPACING.xs },
     noteText: { flex: 1, fontSize: FONT_SIZE.xs },
     equipCardFooter: { borderTopWidth: 1, padding: SPACING.md },
+    swipeRow: {},
+    deleteAction: { width: 84, borderRadius: BORDER_RADIUS.lg, height: '100%', alignItems: 'center', justifyContent: 'center', gap: 4 },
+    deleteActionText: { color: '#fff', fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
+    swipeHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: BORDER_RADIUS.sm, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md },
+    swipeHintText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium },
 
     // Return Modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
@@ -1163,5 +1352,6 @@ const styles = StyleSheet.create({
     fieldLabel: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium },
     qtyRow: { flexDirection: 'row', gap: SPACING.sm },
     qtyInput: { borderWidth: 1.5, borderRadius: BORDER_RADIUS.sm, width: '100%', textAlign: 'center', paddingVertical: SPACING.sm, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
+    singleLineInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, fontSize: FONT_SIZE.sm },
     noteInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.sm, padding: SPACING.md, fontSize: FONT_SIZE.sm, minHeight: 80, textAlignVertical: 'top' },
 });

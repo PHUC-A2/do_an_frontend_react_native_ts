@@ -33,6 +33,11 @@ import { NotificationType, ResNotificationDTO } from '@/types/notification.types
 
 type Nav = NativeStackNavigationProp<ClientStackParamList>;
 type NotificationFilter = 'all' | 'unread' | 'read';
+const FILTER_TABS: { key: NotificationFilter; label: string }[] = [
+    { key: 'all', label: 'Tất cả' },
+    { key: 'unread', label: 'Chưa đọc' },
+    { key: 'read', label: 'Đã đọc' },
+];
 
 type NotificationMeta = {
     icon: keyof typeof Ionicons.glyphMap;
@@ -154,29 +159,12 @@ export default function NotificationsScreen() {
     const { isAuthenticated } = useAppSelector((s) => s.auth);
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
+    const [tabBarWidth, setTabBarWidth] = useState(0);
+    const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (isAuthenticated) dispatch(fetchNotifications());
     }, [dispatch, isAuthenticated]);
-
-    useEffect(() => {
-        navigation.setOptions({
-            headerRight: unreadCount > 0
-                ? () => (
-                    <TouchableOpacity
-                        onPress={() => dispatch(markAllReadAsync())}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: SPACING.sm }}
-                        activeOpacity={0.75}
-                    >
-                        <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
-                        <Text style={{ fontSize: FONT_SIZE.sm, color: colors.primary, fontWeight: FONT_WEIGHT.medium }}>
-                            Đọc tất cả
-                        </Text>
-                    </TouchableOpacity>
-                )
-                : undefined,
-        });
-    }, [colors.primary, dispatch, navigation, unreadCount]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -205,6 +193,11 @@ export default function NotificationsScreen() {
         return visibleNotifications;
     }, [activeFilter, visibleNotifications]);
 
+    const tabIndex = FILTER_TABS.findIndex((tab) => tab.key === activeFilter);
+    useEffect(() => {
+        Animated.spring(tabIndicatorAnim, { toValue: tabIndex, useNativeDriver: true }).start();
+    }, [tabIndex, tabIndicatorAnim]);
+
     const handleDeleteOne = useCallback((id: number) => {
         dispatch(deleteNotificationAsync(id));
     }, [dispatch]);
@@ -220,6 +213,37 @@ export default function NotificationsScreen() {
             ],
         );
     }, [dispatch, visibleNotifications.length]);
+
+    useEffect(() => {
+        const canMarkAll = unreadCount > 0;
+        const canDeleteAll = visibleNotifications.length > 0;
+        navigation.setOptions({
+            headerRight: canMarkAll || canDeleteAll
+                ? () => (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: SPACING.sm }}>
+                        {canMarkAll ? (
+                            <TouchableOpacity
+                                onPress={() => dispatch(markAllReadAsync())}
+                                activeOpacity={0.75}
+                                style={{ padding: 4 }}
+                            >
+                                <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                        ) : null}
+                        {canDeleteAll ? (
+                            <TouchableOpacity
+                                onPress={handleDeleteAll}
+                                activeOpacity={0.75}
+                                style={{ padding: 4 }}
+                            >
+                                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
+                )
+                : undefined,
+        });
+    }, [colors.danger, colors.primary, dispatch, handleDeleteAll, navigation, unreadCount, visibleNotifications.length]);
 
     const handlePress = useCallback(async (item: ResNotificationDTO) => {
         if (!item.isRead) {
@@ -347,77 +371,56 @@ export default function NotificationsScreen() {
 
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['left', 'right']}>
+            <View
+                style={[styles.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+                onLayout={(event) => setTabBarWidth(event.nativeEvent.layout.width)}
+            >
+                {FILTER_TABS.map((tab) => {
+                    const isActive = activeFilter === tab.key;
+                    const count = tab.key === 'all' ? visibleNotifications.length : tab.key === 'unread' ? unreadItems : readItems;
+                    return (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={styles.tabItem}
+                            onPress={() => setActiveFilter(tab.key)}
+                            activeOpacity={0.75}
+                        >
+                            <Text style={[styles.tabLabel, { color: isActive ? colors.primary : colors.textHint }, isActive && { fontWeight: FONT_WEIGHT.semibold }]}>
+                                {tab.label}
+                            </Text>
+                            {count > 0 && (
+                                <View style={[styles.tabBadge, { backgroundColor: isActive ? colors.primary : colors.textHint }]}>
+                                    <Text style={styles.tabBadgeText}>{count}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    );
+                })}
+                <Animated.View
+                    style={[
+                        styles.tabIndicator,
+                        { backgroundColor: colors.primary, width: tabBarWidth > 0 ? tabBarWidth / FILTER_TABS.length : undefined },
+                        {
+                            transform: [{
+                                translateX: tabIndicatorAnim.interpolate({
+                                    inputRange: [0, 1, 2],
+                                    outputRange: [
+                                        0,
+                                        tabBarWidth > 0 ? tabBarWidth / FILTER_TABS.length : 0,
+                                        tabBarWidth > 0 ? (tabBarWidth / FILTER_TABS.length) * 2 : 0,
+                                    ],
+                                }),
+                            }],
+                        },
+                    ]}
+                />
+            </View>
+
             <FlatList
                 data={isLoading && !refreshing ? (Array(5).fill(null) as null[]) : filteredNotifications}
                 keyExtractor={(item, index) => (item ? String(item.id) : `sk-${index}`)}
                 renderItem={isLoading && !refreshing ? (() => <SkeletonCard />) : (renderNotification as any)}
                 contentContainerStyle={styles.list}
-                ListHeaderComponent={
-                    <View style={styles.headerWrap}>
-                        <View style={[styles.filterBar, { backgroundColor: colors.surface, borderColor: colors.border, ...(isDark ? {} : SHADOW.sm) }]}>
-                            {[
-                                { key: 'all' as const, label: 'Tất cả', count: visibleNotifications.length },
-                                { key: 'unread' as const, label: 'Chưa đọc', count: unreadItems },
-                                { key: 'read' as const, label: 'Đã đọc', count: readItems },
-                            ].map((tab) => {
-                                const isActive = activeFilter === tab.key;
-                                return (
-                                    <TouchableOpacity
-                                        key={tab.key}
-                                        activeOpacity={0.85}
-                                        onPress={() => setActiveFilter(tab.key)}
-                                        style={[
-                                            styles.filterTab,
-                                            { backgroundColor: isActive ? colors.primaryLight : 'transparent' },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.filterTabText,
-                                                { color: isActive ? colors.primary : colors.textHint },
-                                                isActive ? { fontWeight: FONT_WEIGHT.semibold } : null,
-                                            ]}
-                                        >
-                                            {tab.label}
-                                        </Text>
-                                        <View style={[styles.filterTabBadge, { backgroundColor: isActive ? colors.primary : colors.textHint }]}>
-                                            <Text style={styles.filterTabBadgeText}>{tab.count}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-
-                        <View style={styles.sectionHead}>
-                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                                {activeFilter === 'all' ? 'Tất cả thông báo' : activeFilter === 'unread' ? 'Thông báo chưa đọc' : 'Thông báo đã đọc'}
-                            </Text>
-                            <View style={styles.headerActionsInline}>
-                                {unreadCount > 0 ? (
-                                    <TouchableOpacity
-                                        onPress={() => dispatch(markAllReadAsync())}
-                                        activeOpacity={0.85}
-                                        style={[styles.secondaryButton, { borderColor: colors.primary }]}
-                                    >
-                                        <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
-                                        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Đã đọc</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-
-                                {visibleNotifications.length > 0 ? (
-                                    <TouchableOpacity
-                                        onPress={handleDeleteAll}
-                                        activeOpacity={0.85}
-                                        style={[styles.secondaryButton, { borderColor: colors.danger }]}
-                                    >
-                                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                                        <Text style={[styles.secondaryButtonText, { color: colors.danger }]}>Xóa</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-                            </View>
-                        </View>
-                    </View>
-                }
                 ListEmptyComponent={
                     !isLoading ? (
                         <EmptyState
@@ -443,29 +446,23 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     safe: { flex: 1 },
     list: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
-    headerWrap: { paddingTop: SPACING.md, paddingBottom: SPACING.sm },
-    filterBar: {
-        borderWidth: 1,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: 4,
-        marginBottom: SPACING.lg,
+    tabBar: {
         flexDirection: 'row',
         alignItems: 'center',
+        borderBottomWidth: 1,
+        position: 'relative',
     },
-    filterTab: {
+    tabItem: {
         flex: 1,
-        minHeight: 42,
-        borderRadius: BORDER_RADIUS.lg,
-        paddingHorizontal: SPACING.sm,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
+        paddingHorizontal: SPACING.xs,
     },
-    filterTabText: {
-        fontSize: FONT_SIZE.sm,
-    },
-    filterTabBadge: {
+    tabLabel: { fontSize: FONT_SIZE.sm },
+    tabBadge: {
         minWidth: 18,
         height: 18,
         borderRadius: 9,
@@ -473,36 +470,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    filterTabBadgeText: {
+    tabBadgeText: {
         color: '#fff',
         fontSize: 10,
         fontWeight: FONT_WEIGHT.bold,
     },
-    headerActionsInline: {
-        flexDirection: 'row',
-        gap: SPACING.sm,
+    tabIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        height: 2,
+        borderRadius: 1,
     },
-    secondaryButton: {
-        minHeight: 34,
-        borderWidth: 1,
-        borderRadius: BORDER_RADIUS.md,
-        paddingHorizontal: SPACING.sm,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.xs,
-    },
-    secondaryButtonText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    sectionHead: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: SPACING.sm,
-        gap: SPACING.sm,
-    },
-    sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
     swipeRow: {
         marginBottom: SPACING.md,
     },

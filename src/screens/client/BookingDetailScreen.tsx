@@ -59,6 +59,10 @@ function durationLabel(startISO: string, endISO: string, mins?: number): string 
     return `${rem} phút`;
 }
 
+function hasUnreturnedEquipments(equips: ResBookingEquipmentDTO[]): boolean {
+    return equips.some((equip) => !equip.deletedByClient && equip.status === 'BORROWED');
+}
+
 const InfoRow = ({
     icon,
     label,
@@ -203,6 +207,10 @@ export default function BookingDetailScreen({ route }: Props) {
     };
 
     const handleDelete = () => {
+        if (hasUnreturnedEquipments(equips)) {
+            Alert.alert('Chưa thể xóa', 'Bạn cần trả hết thiết bị mượn trước khi xóa lịch sử booking.');
+            return;
+        }
         Alert.alert(
             'Xóa lịch sử',
             'Bạn có muốn xóa lịch đặt này khỏi danh sách không?',
@@ -274,10 +282,12 @@ export default function BookingDetailScreen({ route }: Props) {
     const isActive   = booking.status === 'ACTIVE' || booking.status === 'CONFIRMED';
     const isPaid     = booking.status === 'PAID';
     const isCancelled = booking.status === 'CANCELLED';
+    const hasBorrowedEquipment = hasUnreturnedEquipments(equips);
 
     const canPay    = isActive && !isEnded;
     const canCancel = (isActive || isPending) && !isEnded;
-    const canDelete = isPaid || isCancelled || isEnded;
+    const canDeleteBase = isPaid || isCancelled || isEnded;
+    const canDelete = canDeleteBase && !hasBorrowedEquipment;
 
     const statusMeta = STATUS_COLOR[booking.status] ?? { text: '#6B7280', bg: '#F3F4F6' };
 
@@ -479,6 +489,13 @@ export default function BookingDetailScreen({ route }: Props) {
                         </TouchableOpacity>
                     )}
 
+                    {canDeleteBase && hasBorrowedEquipment && (
+                        <View style={[styles.bottomInfoChip, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                            <Ionicons name="construct-outline" size={14} color="#F59E0B" />
+                            <Text style={[styles.bottomInfoChipText, { color: '#F59E0B' }]}>Phải trả thiết bị trước khi xóa</Text>
+                        </View>
+                    )}
+
                     {canCancel && (
                         <TouchableOpacity
                             style={[styles.bottomBtn, { borderColor: '#EF4444', flex: 1 }]}
@@ -639,6 +656,19 @@ const styles = StyleSheet.create({
         minHeight: 48,
     },
     bottomBtnText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold },
+    bottomInfoChip: {
+        flex: 1.1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.xs,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1,
+        minHeight: 48,
+    },
+    bottomInfoChipText: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold },
     bottomBtnPrimary: {
         flexDirection: 'row',
         alignItems: 'center',
