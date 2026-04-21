@@ -1,7 +1,8 @@
 export const delay = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-export const getInitials = (name: string): string => {
+export const getInitials = (name: string | null | undefined): string => {
+    if (!name) return '';
     return name
         .split(' ')
         .filter(Boolean)

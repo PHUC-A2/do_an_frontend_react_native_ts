@@ -112,7 +112,7 @@ export default function ProfileScreen() {
             <ScrollView>
                 {/* Profile Header */}
                 <View style={{ alignItems: 'center', paddingVertical: SPACING.xxl, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <Avatar uri={user?.avatar} name={user?.name} size={72} />
+                    <Avatar uri={user?.avatar} name={user?.name || user?.email} size={72} />
                     <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary, marginTop: SPACING.md }}>{user?.name ?? 'Người dùng'}</Text>
                     <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: SPACING.xs }}>{user?.email}</Text>
                 </View>
