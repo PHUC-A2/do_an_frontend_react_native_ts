@@ -19,11 +19,12 @@ const BACKGROUND_NOTIFICATION_TASK = 'tub-sport-background-notification';
 Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
         const source = notification.request.content.data?.__source;
-        const shouldShowForeground = source === 'local-ws';
+        const isRealtimeBanner = source === 'local-ws-notification' || source === 'local-ws';
+        const isRealtimeRing = source === 'local-ws-ring';
         return {
-            shouldShowBanner: shouldShowForeground,
-            shouldShowList: shouldShowForeground,
-            shouldPlaySound: shouldShowForeground,
+            shouldShowBanner: isRealtimeBanner,
+            shouldShowList: isRealtimeBanner,
+            shouldPlaySound: isRealtimeRing,
             shouldSetBadge: false,
         };
     },

@@ -74,14 +74,13 @@ class RealtimeService {
             content: {
                 title,
                 body,
-                sound: 'default',
                 channelId: ANDROID_CHANNEL_ID,
                 data: {
                     ...notification,
                     bookingId: notification.referenceId ?? undefined,
                     screen: isPaymentType ? 'paymentqr' : 'bookingdetail',
                     targetTab: 'MyBookings',
-                    __source: 'local-ws',
+                    __source: 'local-ws-notification',
                 },
             },
             trigger: null,
@@ -96,7 +95,7 @@ class RealtimeService {
                 body: 'Bạn có cập nhật mới.',
                 sound: 'default',
                 channelId: ANDROID_CHANNEL_ID,
-                data: { __source: 'local-ws', targetTab: 'Notifications' },
+                data: { __source: 'local-ws-ring', targetTab: 'Notifications' },
             },
             trigger: null,
         });

@@ -129,7 +129,7 @@ export default function UpdateBookingScreen({ route, navigation }: Props) {
         dispatch(fetchMyBookings(undefined)),
         dispatch(fetchNotifications()),
       ]);
-      Alert.alert('Cập nhật thành công', 'Lịch đặt đã được cập nhật.', [{ text: 'Xem chi tiết', onPress: () => navigation.replace('BookingDetail', { bookingId }) }]);
+      Alert.alert('Cập nhật thành công', 'Lịch đặt đã được cập nhật và đang chờ admin xác nhận lại.', [{ text: 'Xem chi tiết', onPress: () => navigation.replace('BookingDetail', { bookingId }) }]);
     } catch (err: any) { Alert.alert('Cập nhật thất bại', err?.response?.data?.message ?? 'Đã xảy ra lỗi, vui lòng thử lại.'); }
     finally { setSubmitting(false); }
   }, [booking, bookingId, borrowAck, borrowLines, borrowPrint, changePitch, dispatch, equipmentTouched, mins, navigation, phone, selectedPitchId, startISO, endISO]);

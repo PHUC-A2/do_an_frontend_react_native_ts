@@ -713,6 +713,7 @@ export default function MyBookingsScreen() {
     const { colors } = useTheme();
     const { myBookings, isLoading } = useAppSelector((s) => s.booking);
     const { isAuthenticated } = useAppSelector((s) => s.auth);
+    const lastRealtimeEvent = useAppSelector((s) => s.realtime.lastEvent);
 
     const [activeTab, setActiveTab] = useState<TabKey>('upcoming');
     const [refreshing, setRefreshing] = useState(false);
@@ -771,6 +772,37 @@ export default function MyBookingsScreen() {
             }
         }, [isAuthenticated, loadBookings])
     );
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        if (lastRealtimeEvent?.event !== 'notification') return;
+
+        const type = lastRealtimeEvent.notification.type;
+        const bookingRelatedTypes = new Set([
+            'BOOKING_CREATED',
+            'BOOKING_PENDING_CONFIRMATION',
+            'BOOKING_APPROVED',
+            'BOOKING_REJECTED',
+            'PAYMENT_REQUESTED',
+            'PAYMENT_PROOF_UPLOADED',
+            'PAYMENT_CONFIRMED',
+            'MATCH_REMINDER',
+        ]);
+        const equipmentRelatedTypes = new Set([
+            'EQUIPMENT_BORROWED',
+            'EQUIPMENT_RETURNED',
+            'EQUIPMENT_LOST',
+            'EQUIPMENT_DAMAGED',
+        ]);
+
+        if (bookingRelatedTypes.has(type)) {
+            void loadBookings();
+        }
+
+        if (bookingRelatedTypes.has(type) || equipmentRelatedTypes.has(type)) {
+            void loadEquipments();
+        }
+    }, [isAuthenticated, lastRealtimeEvent, loadBookings, loadEquipments]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
