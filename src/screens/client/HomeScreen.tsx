@@ -203,9 +203,11 @@ type PitchGridCardProps = {
     index: number;
     colors: AppColors;
     onPress: (id: number) => void;
+    /** Trong hàng marquee: bỏ margin ngang, để parent dùng `gap`. */
+    variant?: 'grid' | 'marqueeRow';
 };
 
-const PitchGridCard = memo(function PitchGridCard({ pitch, index, colors, onPress }: PitchGridCardProps) {
+const PitchGridCard = memo(function PitchGridCard({ pitch, index, colors, onPress, variant = 'grid' }: PitchGridCardProps) {
     const uri = pitch.pitchUrl ? `${IMAGE_BASE_URL}${pitch.pitchUrl}` : null;
     const handlePress = useCallback(() => onPress(pitch.id), [onPress, pitch.id]);
     const minPrice =
@@ -223,8 +225,8 @@ const PitchGridCard = memo(function PitchGridCard({ pitch, index, colors, onPres
                 borderColor: colors.border,
                 overflow: 'hidden',
                 marginBottom: SPACING.md,
-                marginRight: index % 2 === 0 ? SPACING.sm : 0,
-                marginLeft: index % 2 === 1 ? SPACING.sm : 0,
+                marginRight: variant === 'marqueeRow' ? 0 : index % 2 === 0 ? SPACING.sm : 0,
+                marginLeft: variant === 'marqueeRow' ? 0 : index % 2 === 1 ? SPACING.sm : 0,
                 ...SHADOW.sm,
             }}
         >
@@ -262,12 +264,22 @@ type PitchPairSegmentProps = {
     onPitchPress: (id: number) => void;
 };
 
+const PAIR_INNER_GAP = SPACING.md;
+const PAIR_SEGMENT_TAIL_GAP = SPACING.lg;
+
 const PitchPairSegment = memo(function PitchPairSegment({ left, right, segmentWidth, colors, onPitchPress }: PitchPairSegmentProps) {
     return (
-        <View style={{ width: segmentWidth, flexDirection: 'row' }}>
-            <PitchGridCard pitch={left} index={0} colors={colors} onPress={onPitchPress} />
+        <View
+            style={{
+                width: segmentWidth,
+                flexDirection: 'row',
+                gap: PAIR_INNER_GAP,
+                marginRight: PAIR_SEGMENT_TAIL_GAP,
+            }}
+        >
+            <PitchGridCard pitch={left} index={0} colors={colors} onPress={onPitchPress} variant="marqueeRow" />
             {right ? (
-                <PitchGridCard pitch={right} index={1} colors={colors} onPress={onPitchPress} />
+                <PitchGridCard pitch={right} index={1} colors={colors} onPress={onPitchPress} variant="marqueeRow" />
             ) : (
                 <View style={{ flex: 1 }} />
             )}
@@ -296,7 +308,8 @@ const FeaturedPitchesMarquee = memo(function FeaturedPitchesMarquee({ width, pit
         return out;
     }, [pitches]);
 
-    const stripWidth = pairs.length * segmentWidth;
+    const segmentStride = segmentWidth + PAIR_SEGMENT_TAIL_GAP;
+    const stripWidth = pairs.length * segmentStride;
     const scrollX = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
