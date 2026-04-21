@@ -68,6 +68,9 @@ export const ENDPOINTS = {
         DELETE: (id: number) => `/client/notifications/${id}`,
         CLEAR: '/client/notifications/clear',
     },
+    DEVICES: {
+        REGISTER_TOKEN: '/devices/register-token',
+    },
     // Equipment
     EQUIPMENT: {
         LIST: '/admin/equipment',

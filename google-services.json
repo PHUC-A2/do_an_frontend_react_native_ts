@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "60216516830",
+    "project_id": "tbu-sport",
+    "storage_bucket": "tbu-sport.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60216516830:android:4161eb474c67ae37d4a24f",
+        "android_client_info": {
+          "package_name": "com.phuc.tbusport"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBleLIfAsfCIy6sAlIn4ufdPkhruPJnhtQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

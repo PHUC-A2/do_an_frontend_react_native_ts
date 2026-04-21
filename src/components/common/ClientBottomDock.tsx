@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '@config/ThemeContext';
+import { useAppSelector } from '@redux/hooks';
 import { FONT_SIZE, FONT_WEIGHT } from '@config/theme';
 
 const DOCK_ITEMS = [
@@ -18,6 +19,7 @@ export default function ClientBottomDock() {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<any>();
     const { colors } = useTheme();
+    const unreadCount = useAppSelector((state) => state.notification.unreadCount);
 
     return (
         <View
@@ -37,7 +39,29 @@ export default function ClientBottomDock() {
                     activeOpacity={0.8}
                     style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 }}
                 >
-                    <Ionicons name={item.inactiveIcon as any} size={22} color={colors.textHint} />
+                    <View style={{ position: 'relative' }}>
+                        <Ionicons name={item.inactiveIcon as any} size={22} color={colors.textHint} />
+                        {item.key === 'Notifications' && unreadCount > 0 ? (
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    top: -6,
+                                    right: -10,
+                                    minWidth: 16,
+                                    height: 16,
+                                    borderRadius: 8,
+                                    paddingHorizontal: 3,
+                                    backgroundColor: colors.danger,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <Text style={{ color: '#fff', fontSize: 9, fontWeight: FONT_WEIGHT.bold }}>
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </Text>
+                            </View>
+                        ) : null}
+                    </View>
                     <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.medium, color: colors.textHint }}>
                         {item.label}
                     </Text>

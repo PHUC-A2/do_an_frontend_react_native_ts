@@ -14,9 +14,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tubsport.mobile",
+      "bundleIdentifier": "com.phuc.tbusport",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn."
+        "NSFaceIDUsageDescription": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -24,7 +28,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a73e8"
       },
-      "package": "com.tubsport.mobile",
+      "package": "com.phuc.tbusport",
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true
@@ -41,7 +46,8 @@
         {
           "faceIDPermission": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

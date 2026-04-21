@@ -32,6 +32,7 @@ import { formatRelative } from '@utils/format/date';
 import { NotificationType, ResNotificationDTO } from '@/types/notification.types';
 
 type Nav = NativeStackNavigationProp<ClientStackParamList>;
+type NotificationFilter = 'all' | 'unread' | 'read';
 
 type NotificationMeta = {
     icon: keyof typeof Ionicons.glyphMap;
@@ -152,6 +153,7 @@ export default function NotificationsScreen() {
     const { notifications, isLoading, unreadCount } = useAppSelector((s) => s.notification);
     const { isAuthenticated } = useAppSelector((s) => s.auth);
     const [refreshing, setRefreshing] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
 
     useEffect(() => {
         if (isAuthenticated) dispatch(fetchNotifications());
@@ -191,6 +193,17 @@ export default function NotificationsScreen() {
         () => visibleNotifications.filter((item) => !item.isRead).length,
         [visibleNotifications],
     );
+
+    const readItems = useMemo(
+        () => visibleNotifications.filter((item) => item.isRead).length,
+        [visibleNotifications],
+    );
+
+    const filteredNotifications = useMemo(() => {
+        if (activeFilter === 'unread') return visibleNotifications.filter((item) => !item.isRead);
+        if (activeFilter === 'read') return visibleNotifications.filter((item) => item.isRead);
+        return visibleNotifications;
+    }, [activeFilter, visibleNotifications]);
 
     const handleDeleteOne = useCallback((id: number) => {
         dispatch(deleteNotificationAsync(id));
@@ -241,83 +254,84 @@ export default function NotificationsScreen() {
         const cardBorder = item.isRead ? colors.border : `${colors.primary}55`;
 
         return (
-            <Swipeable
-                overshootRight={false}
-                renderRightActions={() => renderRightActions(item)}
-                containerStyle={{ marginBottom: SPACING.md }}
-            >
-                <TouchableOpacity
-                    activeOpacity={clickable ? 0.82 : 0.95}
-                    onPress={() => void handlePress(item)}
-                    style={[
-                        styles.card,
-                        {
-                            marginBottom: 0,
-                            backgroundColor: cardBg,
-                            borderColor: cardBorder,
-                            ...(isDark ? {} : SHADOW.sm),
-                        },
-                    ]}
+            <View style={styles.swipeRow}>
+                <Swipeable
+                    overshootRight={false}
+                    renderRightActions={() => renderRightActions(item)}
                 >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md }}>
-                        <View style={[styles.iconWrap, { backgroundColor: item.isRead ? colors.surfaceVariant : meta.bg }]}>
-                            <Ionicons name={meta.icon} size={20} color={item.isRead ? colors.textHint : meta.color} />
-                        </View>
-
-                        <View style={{ flex: 1 }}>
-                            <View style={styles.cardTopRow}>
-                                <View style={[styles.typePill, { backgroundColor: meta.bg }]}>
-                                    <Text style={[styles.typePillText, { color: meta.color }]}>{meta.label}</Text>
-                                </View>
-                                {!item.isRead ? (
-                                    <View style={[styles.unreadPill, { backgroundColor: colors.primary }]}>
-                                        <Text style={styles.unreadPillText}>Mới</Text>
-                                    </View>
-                                ) : null}
+                    <TouchableOpacity
+                        activeOpacity={clickable ? 0.82 : 0.95}
+                        onPress={() => void handlePress(item)}
+                        style={[
+                            styles.card,
+                            {
+                                marginBottom: 0,
+                                backgroundColor: cardBg,
+                                borderColor: cardBorder,
+                                ...(isDark ? {} : SHADOW.sm),
+                            },
+                        ]}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md }}>
+                            <View style={[styles.iconWrap, { backgroundColor: item.isRead ? colors.surfaceVariant : meta.bg }]}>
+                                <Ionicons name={meta.icon} size={20} color={item.isRead ? colors.textHint : meta.color} />
                             </View>
 
-                            <Text style={[styles.sender, { color: colors.textHint }]}>{getSenderLabel(item)}</Text>
-
-                            <Text
-                                style={[
-                                    styles.title,
-                                    { color: colors.textPrimary, fontWeight: item.isRead ? FONT_WEIGHT.medium : FONT_WEIGHT.bold },
-                                ]}
-                                numberOfLines={2}
-                            >
-                                {getDisplayTitle(item)}
-                            </Text>
-
-                            <Text style={[styles.body, { color: colors.textSecondary }]} numberOfLines={3}>
-                                {getDisplayBody(item)}
-                            </Text>
-
-                            <View style={styles.footerRow}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Ionicons name="time-outline" size={12} color={colors.textHint} />
-                                    <Text style={[styles.time, { color: colors.textHint }]}>{formatRelative(item.createdAt)}</Text>
-                                </View>
-
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
-                                    {clickable ? (
-                                        <View style={[styles.linkPill, { borderColor: colors.primary }]}>
-                                            <Text style={[styles.linkText, { color: colors.primary }]}>Xem chi tiết</Text>
-                                            <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                            <View style={{ flex: 1 }}>
+                                <View style={styles.cardTopRow}>
+                                    <View style={[styles.typePill, { backgroundColor: meta.bg }]}>
+                                        <Text style={[styles.typePillText, { color: meta.color }]}>{meta.label}</Text>
+                                    </View>
+                                    {!item.isRead ? (
+                                        <View style={[styles.unreadPill, { backgroundColor: colors.primary }]}>
+                                            <Text style={styles.unreadPillText}>Mới</Text>
                                         </View>
                                     ) : null}
-                                    <TouchableOpacity
-                                        activeOpacity={0.7}
-                                        onPress={() => handleDeleteOne(item.id)}
-                                        style={[styles.inlineDeleteButton, { backgroundColor: colors.surfaceVariant }]}
-                                    >
-                                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                                    </TouchableOpacity>
+                                </View>
+
+                                <Text style={[styles.sender, { color: colors.textHint }]}>{getSenderLabel(item)}</Text>
+
+                                <Text
+                                    style={[
+                                        styles.title,
+                                        { color: colors.textPrimary, fontWeight: item.isRead ? FONT_WEIGHT.medium : FONT_WEIGHT.bold },
+                                    ]}
+                                    numberOfLines={2}
+                                >
+                                    {getDisplayTitle(item)}
+                                </Text>
+
+                                <Text style={[styles.body, { color: colors.textSecondary }]} numberOfLines={3}>
+                                    {getDisplayBody(item)}
+                                </Text>
+
+                                <View style={styles.footerRow}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <Ionicons name="time-outline" size={12} color={colors.textHint} />
+                                        <Text style={[styles.time, { color: colors.textHint }]}>{formatRelative(item.createdAt)}</Text>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+                                        {clickable ? (
+                                            <View style={[styles.linkPill, { borderColor: colors.primary }]}>
+                                                <Text style={[styles.linkText, { color: colors.primary }]}>Xem chi tiết</Text>
+                                                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                                            </View>
+                                        ) : null}
+                                        <TouchableOpacity
+                                            activeOpacity={0.7}
+                                            onPress={() => handleDeleteOne(item.id)}
+                                            style={[styles.inlineDeleteButton, { backgroundColor: colors.surfaceVariant }]}
+                                        >
+                                            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             </View>
                         </View>
-                    </View>
-                </TouchableOpacity>
-            </Swipeable>
+                    </TouchableOpacity>
+                </Swipeable>
+            </View>
         );
     };
 
@@ -334,46 +348,51 @@ export default function NotificationsScreen() {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['left', 'right']}>
             <FlatList
-                data={isLoading && !refreshing ? (Array(5).fill(null) as null[]) : visibleNotifications}
+                data={isLoading && !refreshing ? (Array(5).fill(null) as null[]) : filteredNotifications}
                 keyExtractor={(item, index) => (item ? String(item.id) : `sk-${index}`)}
                 renderItem={isLoading && !refreshing ? (() => <SkeletonCard />) : (renderNotification as any)}
                 contentContainerStyle={styles.list}
                 ListHeaderComponent={
                     <View style={styles.headerWrap}>
-                        <View
-                            style={[
-                                styles.heroCard,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.border,
-                                    ...(isDark ? {} : SHADOW.md),
-                                },
-                            ]}
-                        >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
-                                <View style={[styles.heroIconWrap, { backgroundColor: colors.primaryLight }]}>
-                                    <Ionicons name="notifications-outline" size={24} color={colors.primary} />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>Thông báo của bạn</Text>
-                                    <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
-                                        Chạm để mở đúng phần liên quan. Vuốt sang trái để xóa nhanh từng thông báo.
-                                    </Text>
-                                </View>
-                            </View>
+                        <View style={[styles.filterBar, { backgroundColor: colors.surface, borderColor: colors.border, ...(isDark ? {} : SHADOW.sm) }]}>
+                            {[
+                                { key: 'all' as const, label: 'Tất cả', count: visibleNotifications.length },
+                                { key: 'unread' as const, label: 'Chưa đọc', count: unreadItems },
+                                { key: 'read' as const, label: 'Đã đọc', count: readItems },
+                            ].map((tab) => {
+                                const isActive = activeFilter === tab.key;
+                                return (
+                                    <TouchableOpacity
+                                        key={tab.key}
+                                        activeOpacity={0.85}
+                                        onPress={() => setActiveFilter(tab.key)}
+                                        style={[
+                                            styles.filterTab,
+                                            { backgroundColor: isActive ? colors.primaryLight : 'transparent' },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterTabText,
+                                                { color: isActive ? colors.primary : colors.textHint },
+                                                isActive ? { fontWeight: FONT_WEIGHT.semibold } : null,
+                                            ]}
+                                        >
+                                            {tab.label}
+                                        </Text>
+                                        <View style={[styles.filterTabBadge, { backgroundColor: isActive ? colors.primary : colors.textHint }]}>
+                                            <Text style={styles.filterTabBadgeText}>{tab.count}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
 
-                            <View style={styles.statsRow}>
-                                <View style={[styles.statBox, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-                                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>{unreadItems}</Text>
-                                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Chưa đọc</Text>
-                                </View>
-                                <View style={[styles.statBox, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-                                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>{visibleNotifications.length}</Text>
-                                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tổng cộng</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.heroActions}>
+                        <View style={styles.sectionHead}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                                {activeFilter === 'all' ? 'Tất cả thông báo' : activeFilter === 'unread' ? 'Thông báo chưa đọc' : 'Thông báo đã đọc'}
+                            </Text>
+                            <View style={styles.headerActionsInline}>
                                 {unreadCount > 0 ? (
                                     <TouchableOpacity
                                         onPress={() => dispatch(markAllReadAsync())}
@@ -381,7 +400,7 @@ export default function NotificationsScreen() {
                                         style={[styles.secondaryButton, { borderColor: colors.primary }]}
                                     >
                                         <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
-                                        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Đánh dấu đã đọc</Text>
+                                        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Đã đọc</Text>
                                     </TouchableOpacity>
                                 ) : null}
 
@@ -392,22 +411,11 @@ export default function NotificationsScreen() {
                                         style={[styles.secondaryButton, { borderColor: colors.danger }]}
                                     >
                                         <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                                        <Text style={[styles.secondaryButtonText, { color: colors.danger }]}>Xóa tất cả</Text>
+                                        <Text style={[styles.secondaryButtonText, { color: colors.danger }]}>Xóa</Text>
                                     </TouchableOpacity>
                                 ) : null}
                             </View>
                         </View>
-
-                        {!isLoading ? (
-                            <View style={styles.sectionHead}>
-                                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Mới nhất</Text>
-                                {visibleNotifications.length > 0 ? (
-                                    <Text style={[styles.sectionMeta, { color: colors.textHint }]}>
-                                        {visibleNotifications.length} thông báo
-                                    </Text>
-                                ) : null}
-                            </View>
-                        ) : null}
                     </View>
                 }
                 ListEmptyComponent={
@@ -415,7 +423,7 @@ export default function NotificationsScreen() {
                         <EmptyState
                             icon="notifications-outline"
                             title="Không có thông báo nào"
-                            subtitle="Bạn sẽ nhận được thông báo khi có cập nhật về lịch đặt sân hoặc thanh toán."
+                            subtitle={activeFilter === 'unread' ? 'Hiện tại không còn thông báo chưa đọc.' : activeFilter === 'read' ? 'Chưa có thông báo nào trong mục đã đọc.' : 'Bạn sẽ nhận được thông báo khi có cập nhật mới.'}
                         />
                     ) : null
                 }
@@ -436,42 +444,49 @@ const styles = StyleSheet.create({
     safe: { flex: 1 },
     list: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
     headerWrap: { paddingTop: SPACING.md, paddingBottom: SPACING.sm },
-    heroCard: {
+    filterBar: {
         borderWidth: 1,
         borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.lg,
+        padding: 4,
         marginBottom: SPACING.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    heroIconWrap: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    filterTab: {
+        flex: 1,
+        minHeight: 42,
+        borderRadius: BORDER_RADIUS.lg,
+        paddingHorizontal: SPACING.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    filterTabText: {
+        fontSize: FONT_SIZE.sm,
+    },
+    filterTabBadge: {
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        paddingHorizontal: 4,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    heroTitle: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold },
-    heroSubtitle: { marginTop: 4, fontSize: FONT_SIZE.sm, lineHeight: 18 },
-    statsRow: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.lg },
-    statBox: {
-        flex: 1,
-        borderWidth: 1,
-        borderRadius: BORDER_RADIUS.lg,
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.md,
+    filterTabBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: FONT_WEIGHT.bold,
     },
-    statValue: { fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.bold },
-    statLabel: { marginTop: 4, fontSize: FONT_SIZE.sm },
-    heroActions: {
+    headerActionsInline: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
         gap: SPACING.sm,
-        marginTop: SPACING.lg,
     },
     secondaryButton: {
-        minHeight: 40,
+        minHeight: 34,
         borderWidth: 1,
         borderRadius: BORDER_RADIUS.md,
-        paddingHorizontal: SPACING.md,
+        paddingHorizontal: SPACING.sm,
         flexDirection: 'row',
         alignItems: 'center',
         gap: SPACING.xs,
@@ -485,19 +500,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: SPACING.sm,
+        gap: SPACING.sm,
     },
     sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.bold },
-    sectionMeta: { fontSize: FONT_SIZE.sm },
+    swipeRow: {
+        marginBottom: SPACING.md,
+    },
     card: {
         borderWidth: 1,
         borderRadius: BORDER_RADIUS.xl,
         padding: SPACING.lg,
-        marginBottom: SPACING.md,
+        minHeight: 168,
     },
     deleteAction: {
         width: 84,
         borderRadius: BORDER_RADIUS.xl,
-        marginBottom: SPACING.md,
+        height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
@@ -537,7 +555,7 @@ const styles = StyleSheet.create({
     unreadPillText: { color: '#fff', fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
     sender: { fontSize: FONT_SIZE.xs, marginBottom: 4 },
     title: { fontSize: FONT_SIZE.md, lineHeight: 20 },
-    body: { marginTop: 6, fontSize: FONT_SIZE.sm, lineHeight: 19 },
+    body: { marginTop: 6, fontSize: FONT_SIZE.sm, lineHeight: 19, minHeight: 57 },
     footerRow: {
         marginTop: SPACING.md,
         flexDirection: 'row',

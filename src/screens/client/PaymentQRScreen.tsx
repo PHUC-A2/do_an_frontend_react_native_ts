@@ -25,11 +25,15 @@ import { useTheme } from '@config/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOW, SPACING } from '@config/theme';
 import { paymentService } from '@services/payment.service';
 import { bookingService } from '@services/booking.service';
+import { pitchService } from '@services/pitch.service';
 import { ResPaymentQRDTO, PaymentMethod, PAYMENT_METHOD_OPTIONS } from '@/types/payment.types';
 import { ResBookingDTO } from '@/types/booking.types';
+import { ResPitchDTO } from '@/types/pitch.types';
+import { IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
 import { formatDateTime } from '@utils/format/date';
 import { useAppDispatch } from '@redux/hooks';
+import { useAppSelector } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
 
 type Props = ClientScreenProps<'PaymentQR'>;
@@ -37,13 +41,21 @@ type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
 const POLL_INTERVAL_MS = 15_000;
 
+function resolvePitchImageUri(imageUrl?: string | null): string | null {
+    const raw = imageUrl?.trim();
+    if (!raw) return null;
+    return raw.startsWith('http') ? raw : `${IMAGE_BASE_URL}${raw}`;
+}
+
 export default function PaymentQRScreen({ route }: Props) {
     const { bookingId } = route.params;
     const { colors, isDark } = useTheme();
     const navigation = useNavigation<Nav>();
     const dispatch = useAppDispatch();
+    const lastRealtimeEvent = useAppSelector((state) => state.realtime.lastEvent);
 
     const [booking, setBooking] = useState<ResBookingDTO | null>(null);
+    const [pitch, setPitch] = useState<ResPitchDTO | null>(null);
     const [loadingBooking, setLoadingBooking] = useState(true);
     const [method, setMethod] = useState<PaymentMethod>('BANK_TRANSFER');
     const [creating, setCreating] = useState(false);
@@ -59,9 +71,10 @@ export default function PaymentQRScreen({ route }: Props) {
     const slideAnim = useRef(new Animated.Value(24)).current;
 
     const shadowStyle = isDark ? {} : SHADOW.md;
+    const pitchImageUri = resolvePitchImageUri(pitch?.pitchUrl ?? pitch?.imageUrl ?? booking?.pitchImage ?? null);
 
     // ── Load booking + auto-load pending QR ───────────────────────────────────
-    useEffect(() => {
+    const loadBookingAndPendingQr = useCallback(() => {
         let cancelled = false;
         setLoadingBooking(true);
 
@@ -69,10 +82,20 @@ export default function PaymentQRScreen({ route }: Props) {
             bookingService.getBookingById(bookingId),
             paymentService.getPendingByBooking(bookingId).catch(() => null),
         ])
-            .then(([bookingRes, pendingRes]) => {
+            .then(async ([bookingRes, pendingRes]) => {
                 if (cancelled) return;
                 const b = bookingRes.data.data ?? null;
                 setBooking(b);
+                if (b?.pitchId) {
+                    try {
+                        const pitchRes = await pitchService.getPitchById(b.pitchId);
+                        if (!cancelled) setPitch(pitchRes.data.data ?? null);
+                    } catch {
+                        if (!cancelled) setPitch(null);
+                    }
+                } else {
+                    setPitch(null);
+                }
 
                 // Phục hồi QR của payment PENDING nếu có (không cần nhấn lại nút)
                 const pendingQR = pendingRes?.data?.data ?? null;
@@ -86,11 +109,21 @@ export default function PaymentQRScreen({ route }: Props) {
                     Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
                 ]).start();
             })
-            .catch(() => { if (!cancelled) setBooking(null); })
+            .catch(() => {
+                if (!cancelled) {
+                    setBooking(null);
+                    setPitch(null);
+                }
+            })
             .finally(() => { if (!cancelled) setLoadingBooking(false); });
 
         return () => { cancelled = true; };
     }, [bookingId]);
+
+    useEffect(() => {
+        const cleanup = loadBookingAndPendingQr();
+        return cleanup;
+    }, [loadBookingAndPendingQr]);
 
     // ── Reset paidNotified when bookingId changes ─────────────────────────────
     useEffect(() => { setPaidNotified(false); }, [bookingId]);
@@ -131,6 +164,53 @@ export default function PaymentQRScreen({ route }: Props) {
         }
         return stopPolling;
     }, [qr, booking?.status]);
+
+    useEffect(() => {
+        if (lastRealtimeEvent?.event !== 'notification') return;
+        if (lastRealtimeEvent.notification.referenceId !== bookingId) return;
+        const type = lastRealtimeEvent.notification.type;
+        if (![
+            'PAYMENT_REQUESTED',
+            'PAYMENT_PROOF_UPLOADED',
+            'PAYMENT_CONFIRMED',
+            'PAYMENT_SUCCESS',
+            'PAYMENT_FAILED',
+            'BOOKING_APPROVED',
+            'BOOKING_REJECTED',
+            'BOOKING_CREATED',
+            'BOOKING_PENDING_CONFIRMATION',
+        ].includes(type)) {
+            return;
+        }
+
+        Promise.all([
+            bookingService.getBookingById(bookingId).then(async (res) => {
+                const bookingData = res.data.data ?? null;
+                setBooking(bookingData);
+                if (bookingData?.pitchId) {
+                    try {
+                        const pitchRes = await pitchService.getPitchById(bookingData.pitchId);
+                        setPitch(pitchRes.data.data ?? null);
+                    } catch {
+                        setPitch(null);
+                    }
+                } else {
+                    setPitch(null);
+                }
+            }),
+            paymentService.getPendingByBooking(bookingId)
+                .then((res) => {
+                    const pendingQR = res.data.data ?? null;
+                    if (pendingQR?.vietQrUrl) {
+                        setQr(pendingQR);
+                        setMethod('BANK_TRANSFER');
+                    } else {
+                        setQr(null);
+                    }
+                })
+                .catch(() => undefined),
+        ]).catch(() => undefined);
+    }, [bookingId, lastRealtimeEvent]);
 
     // ── Create payment ────────────────────────────────────────────────────────
     const handlePay = async () => {
@@ -365,10 +445,22 @@ export default function PaymentQRScreen({ route }: Props) {
                 )}
 
                 {/* ── Booking summary card ── */}
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('PitchDetail', { pitchId: booking.pitchId })}
+                    style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}
+                >
                     <Text style={[styles.sectionLabel, { color: colors.textHint }]}>Thông tin lịch đặt</Text>
 
-                    <View style={styles.pitchRow}>
+                    {pitchImageUri ? (
+                        <Image source={{ uri: pitchImageUri }} style={styles.pitchImage} resizeMode="cover" />
+                    ) : (
+                        <View style={[styles.pitchImageFallback, { backgroundColor: colors.surfaceVariant }]}>
+                            <Ionicons name="football-outline" size={40} color={colors.textHint} />
+                        </View>
+                    )}
+
+                    <View style={[styles.pitchRow, { marginTop: SPACING.md }]}>
                         <View style={[styles.pitchIconWrap, { backgroundColor: colors.primaryLight }]}>
                             <Ionicons name="football-outline" size={22} color={colors.primary} />
                         </View>
@@ -380,6 +472,7 @@ export default function PaymentQRScreen({ route }: Props) {
                                 {formatDateTime(booking.startDateTime)} – {formatDateTime(booking.endDateTime)}
                             </Text>
                         </View>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textHint} />
                     </View>
 
                     <View style={[styles.divider, { backgroundColor: colors.divider }]} />
@@ -397,7 +490,7 @@ export default function PaymentQRScreen({ route }: Props) {
                             {formatVND(booking.totalPrice)}
                         </Text>
                     </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* ── Already paid ── */}
                 {isPaid && (
@@ -848,6 +941,18 @@ const styles = StyleSheet.create({
 
     // Booking summary
     pitchRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.md },
+    pitchImage: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: BORDER_RADIUS.md,
+    },
+    pitchImageFallback: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: BORDER_RADIUS.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     pitchIconWrap: {
         width: 44,
         height: 44,

@@ -9,6 +9,7 @@ import { bookingService } from '@services/booking.service';
 import { pitchService } from '@services/pitch.service';
 import { useAppDispatch } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
+import { fetchNotifications } from '@redux/slices/notificationSlice';
 import { ResBookingDTO } from '@/types/booking.types';
 import { ResBookingEquipmentDTO } from '@/types/bookingEquipment.types';
 import { ResPitchDTO } from '@/types/pitch.types';
@@ -124,7 +125,10 @@ export default function UpdateBookingScreen({ route, navigation }: Props) {
     try {
       await bookingService.updateBookingClient(bookingId, { pitchId: changePitch && selectedPitchId ? selectedPitchId : booking.pitchId, startDateTime: startISO, endDateTime: endISO, contactPhone: phone.trim() || undefined });
       if (equipmentTouched && borrowLines.length) await Promise.all(borrowLines.map((line) => bookingService.borrowEquipment({ bookingId, equipmentId: line.equipmentId, quantity: line.quantity, equipmentMobility: line.equipmentMobility, borrowConditionNote: line.borrowConditionNote, borrowConditionAcknowledged: true, borrowReportPrintOptIn: borrowPrint }).catch(() => null)));
-      dispatch(fetchMyBookings(undefined));
+      await Promise.all([
+        dispatch(fetchMyBookings(undefined)),
+        dispatch(fetchNotifications()),
+      ]);
       Alert.alert('Cập nhật thành công', 'Lịch đặt đã được cập nhật.', [{ text: 'Xem chi tiết', onPress: () => navigation.replace('BookingDetail', { bookingId }) }]);
     } catch (err: any) { Alert.alert('Cập nhật thất bại', err?.response?.data?.message ?? 'Đã xảy ra lỗi, vui lòng thử lại.'); }
     finally { setSubmitting(false); }

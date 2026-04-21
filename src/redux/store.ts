@@ -5,6 +5,7 @@ import bookingReducer from './slices/bookingSlice';
 import pitchReducer from './slices/pitchSlice';
 import pitchSearchReducer from './slices/pitchSearchSlice';
 import notificationReducer from './slices/notificationSlice';
+import realtimeReducer from './slices/realtimeSlice';
 
 export const store = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
         pitch: pitchReducer,
         pitchSearch: pitchSearchReducer,
         notification: notificationReducer,
+        realtime: realtimeReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

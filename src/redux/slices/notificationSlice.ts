@@ -45,8 +45,15 @@ const notificationSlice = createSlice({
             state.unreadCount += 1;
         },
         prependNotification(state, action: PayloadAction<ResNotificationDTO>) {
+            const existingIndex = state.notifications.findIndex((item) => item.id === action.payload.id);
+            const existing = existingIndex >= 0 ? state.notifications[existingIndex] : null;
+            if (existingIndex >= 0) {
+                state.notifications.splice(existingIndex, 1);
+            }
             state.notifications.unshift(action.payload);
-            state.unreadCount += 1;
+            if (!action.payload.isRead && (!existing || existing.isRead)) {
+                state.unreadCount += 1;
+            }
         },
     },
     extraReducers: (builder) => {

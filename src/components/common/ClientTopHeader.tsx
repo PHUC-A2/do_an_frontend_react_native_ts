@@ -151,18 +151,6 @@ export default function ClientTopHeader({ title, showBack = false }: ClientTopHe
                     >
                         <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={{ position: 'relative', padding: SPACING.xs }}
-                        onPress={() => navigation.navigate('ClientTabs', { screen: 'Notifications' })}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-                        {unreadCount > 0 && (
-                            <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: colors.danger, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
                     <TouchableOpacity style={{ padding: SPACING.xs }} onPress={toggleTheme} activeOpacity={0.7}>
                         <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={24} color={colors.textPrimary} />
                     </TouchableOpacity>

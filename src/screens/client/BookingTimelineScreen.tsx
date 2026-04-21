@@ -21,6 +21,7 @@ import { bookingService } from '@services/booking.service';
 import { pitchService } from '@services/pitch.service';
 import { useAppDispatch } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
+import { fetchNotifications } from '@redux/slices/notificationSlice';
 import { ResPitchDTO } from '@/types/pitch.types';
 import { ResPitchEquipmentDTO } from '@/types/pitchEquipment.types';
 import { formatVND } from '@utils/format/currency';
@@ -268,7 +269,10 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
                     ),
                 );
             }
-            dispatch(fetchMyBookings(undefined));
+            await Promise.all([
+                dispatch(fetchMyBookings(undefined)),
+                dispatch(fetchNotifications()),
+            ]);
             Alert.alert('Đặt sân thành công!', 'Yêu cầu đặt sân đã được gửi. Chờ admin xác nhận.', [
                 {
                     text: 'Xem đặt sân',

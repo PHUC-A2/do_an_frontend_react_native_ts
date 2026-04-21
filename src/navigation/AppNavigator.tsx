@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { hydrateAuth } from '@redux/slices/authSlice';
 import { fetchAccount } from '@redux/slices/accountSlice';
 import { RootStackParamList } from './types';
+import { navigationRef } from './navigationRef';
 import { COLORS } from '@config/theme';
 import BiometricGateOverlay from '@components/auth/BiometricGateOverlay';
 
@@ -44,7 +45,7 @@ export default function AppNavigator() {
     const isAdmin = (account?.roles ?? []).some((role) => role.name === 'ADMIN');
 
     return (
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
             <Root.Navigator
                 screenOptions={{ headerShown: false }}
                 initialRouteName={isAuthenticated && isAdmin ? 'Admin' : 'Client'}

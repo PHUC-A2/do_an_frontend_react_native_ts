@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     Alert,
     Animated,
     StyleSheet,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,13 +18,15 @@ import { ClientScreenProps, ClientStackParamList } from '@navigation/types';
 import { useTheme } from '@config/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOW, SPACING } from '@config/theme';
 import { bookingService } from '@services/booking.service';
+import { pitchService } from '@services/pitch.service';
 import { ResBookingDTO } from '@/types/booking.types';
 import { ResBookingEquipmentDTO } from '@/types/bookingEquipment.types';
-import { BOOKING_STATUS_LABEL } from '@utils/constants';
+import { ResPitchDTO } from '@/types/pitch.types';
+import { BOOKING_STATUS_LABEL, IMAGE_BASE_URL } from '@utils/constants';
 import { BOOKING_EQUIPMENT_STATUS_META } from '@utils/constants/bookingEquipment.constants';
 import { formatDateTime, formatTime } from '@utils/format/date';
 import { formatVND } from '@utils/format/currency';
-import { useAppDispatch } from '@redux/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
 
 type Props = ClientScreenProps<'BookingDetail'>;
@@ -39,6 +42,12 @@ const STATUS_COLOR: Partial<Record<string, { text: string; bg: string }>> = {
     CANCELLED: { text: '#EF4444', bg: '#FEE2E2' },
     NO_SHOW:   { text: '#9333EA', bg: '#F5F3FF' },
 };
+
+function resolvePitchImageUri(imageUrl?: string | null): string | null {
+    const raw = imageUrl?.trim();
+    if (!raw) return null;
+    return raw.startsWith('http') ? raw : `${IMAGE_BASE_URL}${raw}`;
+}
 
 function durationLabel(startISO: string, endISO: string, mins?: number): string {
     const m = mins ?? (new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000;
@@ -88,8 +97,10 @@ export default function BookingDetailScreen({ route }: Props) {
     const { colors, isDark } = useTheme();
     const navigation = useNavigation<Nav>();
     const dispatch = useAppDispatch();
+    const lastRealtimeEvent = useAppSelector((state) => state.realtime.lastEvent);
 
     const [booking, setBooking] = useState<ResBookingDTO | null>(null);
+    const [pitch, setPitch] = useState<ResPitchDTO | null>(null);
     const [equips, setEquips] = useState<ResBookingEquipmentDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -97,16 +108,27 @@ export default function BookingDetailScreen({ route }: Props) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
 
-    useEffect(() => {
+    const loadBookingDetail = useCallback(() => {
         let cancelled = false;
         setLoading(true);
         Promise.all([
             bookingService.getBookingById(bookingId),
             bookingService.getBookingEquipments(bookingId).catch(() => ({ data: { data: [] } })),
         ])
-            .then(([bRes, eRes]) => {
+            .then(async ([bRes, eRes]) => {
                 if (cancelled) return;
-                setBooking(bRes.data.data ?? null);
+                const bookingData = bRes.data.data ?? null;
+                setBooking(bookingData);
+                if (bookingData?.pitchId) {
+                    try {
+                        const pitchRes = await pitchService.getPitchById(bookingData.pitchId);
+                        if (!cancelled) setPitch(pitchRes.data.data ?? null);
+                    } catch {
+                        if (!cancelled) setPitch(null);
+                    }
+                } else {
+                    setPitch(null);
+                }
                 setEquips((eRes.data.data ?? []).filter((e: ResBookingEquipmentDTO) => !e.deletedByClient));
                 Animated.parallel([
                     Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
@@ -114,13 +136,45 @@ export default function BookingDetailScreen({ route }: Props) {
                 ]).start();
             })
             .catch(() => {
-                if (!cancelled) setBooking(null);
+                if (!cancelled) {
+                    setBooking(null);
+                    setPitch(null);
+                }
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
             });
         return () => { cancelled = true; };
-    }, [bookingId]);
+    }, [bookingId, fadeAnim, slideAnim]);
+
+    useEffect(() => {
+        const cleanup = loadBookingDetail();
+        return cleanup;
+    }, [loadBookingDetail]);
+
+    useEffect(() => {
+        if (lastRealtimeEvent?.event !== 'notification') return;
+        if (lastRealtimeEvent.notification.referenceId !== bookingId) return;
+        void Promise.all([
+            bookingService.getBookingById(bookingId).then(async (res) => {
+                const bookingData = res.data.data ?? null;
+                setBooking(bookingData);
+                if (bookingData?.pitchId) {
+                    try {
+                        const pitchRes = await pitchService.getPitchById(bookingData.pitchId);
+                        setPitch(pitchRes.data.data ?? null);
+                    } catch {
+                        setPitch(null);
+                    }
+                } else {
+                    setPitch(null);
+                }
+            }),
+            bookingService.getBookingEquipments(bookingId)
+                .then((res) => setEquips((res.data.data ?? []).filter((e: ResBookingEquipmentDTO) => !e.deletedByClient)))
+                .catch(() => undefined),
+        ]);
+    }, [bookingId, lastRealtimeEvent]);
 
     const handleCancel = () => {
         Alert.alert(
@@ -174,6 +228,7 @@ export default function BookingDetailScreen({ route }: Props) {
     };
 
     const shadowStyle = isDark ? {} : SHADOW.md;
+    const pitchImageUri = resolvePitchImageUri(pitch?.pitchUrl ?? pitch?.imageUrl ?? booking?.pitchImage ?? null);
 
     if (loading) {
         return (
@@ -257,9 +312,20 @@ export default function BookingDetailScreen({ route }: Props) {
                 </View>
 
                 {/* Pitch info card */}
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('PitchDetail', { pitchId: booking.pitchId })}
+                    style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}
+                >
                     <Text style={[styles.sectionTitle, { color: colors.textHint }]}>Thông tin sân</Text>
-                    <View style={styles.pitchRow}>
+                    {pitchImageUri ? (
+                        <Image source={{ uri: pitchImageUri }} style={styles.pitchImage} resizeMode="cover" />
+                    ) : (
+                        <View style={[styles.pitchImageFallback, { backgroundColor: colors.surfaceVariant }]}>
+                            <Ionicons name="football-outline" size={40} color={colors.textHint} />
+                        </View>
+                    )}
+                    <View style={[styles.pitchRow, { marginTop: SPACING.md }]}>
                         <View style={[styles.pitchIcon, { backgroundColor: colors.primaryLight }]}>
                             <Ionicons name="football" size={24} color={colors.primary} />
                         </View>
@@ -271,8 +337,9 @@ export default function BookingDetailScreen({ route }: Props) {
                                 Mã sân #{booking.pitchId}
                             </Text>
                         </View>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textHint} />
                     </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Booking details card */}
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, ...shadowStyle }]}>
@@ -471,6 +538,18 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.lg,
         borderWidth: 1,
         padding: SPACING.lg,
+    },
+    pitchImage: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: BORDER_RADIUS.md,
+    },
+    pitchImageFallback: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: BORDER_RADIUS.md,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sectionTitle: {
         fontSize: FONT_SIZE.xs,

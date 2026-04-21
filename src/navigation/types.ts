@@ -54,9 +54,9 @@ export type AdminStackParamList = {
 
 // ---- Root ----
 export type RootStackParamList = {
-    Auth: undefined;
-    Client: undefined;
-    Admin: undefined;
+    Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
+    Client: NavigatorScreenParams<ClientStackParamList> | undefined;
+    Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
 };
 
 // Screen prop helpers
