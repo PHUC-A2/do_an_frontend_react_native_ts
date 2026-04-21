@@ -67,7 +67,7 @@ function ClientTabs() {
         >
             <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Trang chủ' }} />
             <Tab.Screen name="Pitches" component={PitchListScreen} options={{ title: 'Sân bóng' }} />
-            <Tab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Đặt sân' }} />
+            <Tab.Screen name="MyBookings" component={MyBookingsScreen} options={{ title: 'Đã đặt' }} />
             <Tab.Screen
                 name="Notifications"
                 component={NotificationsScreen}

@@ -39,7 +39,12 @@ export const authService = {
         api.get<RestResponse<ResAccountDTO>>(ENDPOINTS.AUTH.ACCOUNT),
 
     updateAccount: (data: ReqUpdateAccountDTO) =>
-        api.patch<RestResponse<ResAccountDTO>>(ENDPOINTS.AUTH.ACCOUNT, data),
+        api.patch<RestResponse<ResAccountDTO>>(ENDPOINTS.AUTH.ACCOUNT_ME, data),
+
+    uploadAvatarImage: (formData: FormData) =>
+        api.post<RestResponse<{ url: string }>>(ENDPOINTS.FILES.UPLOAD, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
 
     logout: () =>
         api.post<RestResponse<null>>(ENDPOINTS.AUTH.LOGOUT),

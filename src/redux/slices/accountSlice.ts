@@ -31,13 +31,20 @@ export const fetchAccount = createAsyncThunk<
                 const normalizedAccount: ResAccountDTO = {
                     id: rawUser.id,
                     name: rawUser.name ?? rawUser.fullName ?? '',
+                    fullName: rawUser.fullName ?? null,
                     email: rawUser.email ?? '',
                     phone: rawUser.phone ?? rawUser.phoneNumber ?? null,
+                    phoneNumber: rawUser.phoneNumber ?? rawUser.phone ?? null,
                     avatar: rawUser.avatar ?? rawUser.avatarUrl ?? null,
+                    avatarUrl: rawUser.avatarUrl ?? rawUser.avatar ?? null,
                     address: rawUser.address ?? null,
                     dob: rawUser.dob ?? null,
                     status: rawUser.status ?? 'ACTIVE',
                     roles: Array.isArray(rawUser.roles) ? rawUser.roles : [],
+                    notificationSoundEnabled: rawUser.notificationSoundEnabled !== false,
+                    notificationSoundPreset: rawUser.notificationSoundPreset ?? 'DEFAULT',
+                    paymentPinConfigured: rawUser.paymentPinConfigured ?? null,
+                    paymentConfirmationPinRequiredBySystem: rawUser.paymentConfirmationPinRequiredBySystem ?? null,
                 };
                 return normalizedAccount;
             }

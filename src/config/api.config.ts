@@ -15,6 +15,7 @@ export const ENDPOINTS = {
         FORGOT_PASSWORD: '/auth/forgot-password',
         RESET_PASSWORD: '/auth/reset-password',
         ACCOUNT: '/auth/account',
+        ACCOUNT_ME: '/auth/account/me',
     },
     // Pitches
     PITCHES: {

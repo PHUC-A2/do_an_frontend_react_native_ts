@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Switch, Platform, DeviceEventEmitter } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Switch, Platform, DeviceEventEmitter, Modal, Image, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,12 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@hooks/useAuth';
 import { BIOMETRIC_STATUS_CHANGED_EVENT, useBiometric } from '@hooks/useBiometric';
 import { biometricService } from '@services/BiometricService';
+import { fetchAccount } from '@redux/slices/accountSlice';
 import Avatar from '@components/common/Avatar';
+import Button from '@components/common/Button';
 import GuestPrompt from '@components/common/GuestPrompt';
 import { ClientStackParamList } from '@navigation/types';
 import { useTheme } from '@config/ThemeContext';
-import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS } from '@config/theme';
+import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS, SHADOW } from '@config/theme';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { useToast } from '@/hooks/useToast';
+import * as Clipboard from 'expo-clipboard';
+import { IMAGE_BASE_URL } from '@utils/constants';
 
 type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
@@ -22,11 +27,14 @@ export default function ProfileScreen() {
     const navigation = useNavigation<Nav>();
     const toast = useToast();
     const { colors, isDark, toggleTheme } = useTheme();
+    const dispatch = useAppDispatch();
+    const account = useAppSelector((state) => state.account.account);
     const biometricLabel = Platform.OS === 'ios' ? 'Face ID' : 'vân tay';
     const biometricIconName = Platform.OS === 'ios' ? 'scan-outline' : 'finger-print-outline';
     const [biometricEnabled, setBiometricEnabled] = useState(false);
     const [biometricAvailable, setBiometricAvailable] = useState(false);
     const [biometricBusy, setBiometricBusy] = useState(false);
+    const [previewAvatarOpen, setPreviewAvatarOpen] = useState(false);
 
     const loadBiometricState = useCallback(async () => {
         if (!isAuthenticated) return;
@@ -40,9 +48,10 @@ export default function ProfileScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            void dispatch(fetchAccount());
             void loadBiometricState();
             return undefined;
-        }, [loadBiometricState]),
+        }, [dispatch, loadBiometricState]),
     );
 
     useEffect(() => {
@@ -59,6 +68,51 @@ export default function ProfileScreen() {
         return () => subscription.remove();
     }, [loadBiometricState]);
 
+    const shadowStyle = isDark ? {} : SHADOW.sm;
+    const displayName = account?.fullName?.trim() || account?.name || user?.name || 'Người dùng';
+    const displayPhone = account?.phoneNumber ?? account?.phone ?? null;
+    const displayAvatar = account?.avatarUrl ?? account?.avatar ?? user?.avatar ?? null;
+    const previewAvatarUri = useMemo(() => {
+        const raw = displayAvatar?.trim();
+        if (!raw) return null;
+        if (raw.startsWith('http')) return raw;
+        const base = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
+        const path = raw.startsWith('/') ? raw : `/${raw}`;
+        return `${base}${path}`;
+    }, [displayAvatar]);
+
+    const infoRows = useMemo(() => [
+        {
+            icon: 'card-outline' as const,
+            label: 'Tên đăng nhập / ID',
+            value: account ? `${account.name} (ID: ${account.id})` : 'N/A',
+            copyable: false,
+        },
+        {
+            icon: 'person-outline' as const,
+            label: 'Họ và tên',
+            value: account?.fullName?.trim() || 'Chưa cập nhật',
+            copyable: false,
+        },
+        {
+            icon: 'mail-outline' as const,
+            label: 'Email liên hệ',
+            value: account?.email || user?.email || 'Chưa cập nhật',
+            copyable: false,
+        },
+        {
+            icon: 'call-outline' as const,
+            label: 'Số điện thoại',
+            value: displayPhone?.trim() || 'Chưa cập nhật',
+            copyable: !!displayPhone?.trim(),
+        },
+    ], [account, displayPhone, user?.email]);
+
+    const handleCopy = async (value: string, label: string) => {
+        await Clipboard.setStringAsync(value);
+        toast.success(`${label} đã được sao chép`);
+    };
+
     if (!isAuthenticated) {
         return <GuestPrompt icon="person-outline" title="Trang cá nhân" subtitle="Đăng nhập để xem và chỉnh sửa thông tin cá nhân của bạn" />;
     }
@@ -74,15 +128,6 @@ export default function ProfileScreen() {
             },
         ]);
     };
-
-    const MENU_ITEMS = [
-        ...(isAdmin ? [{ icon: 'shield-outline', label: 'Trang quản trị', onPress: () => navigation.getParent()?.navigate('Admin' as never) }] : []),
-        { icon: 'person-outline', label: 'Chỉnh sửa hồ sơ', onPress: () => navigation.navigate('EditProfile') },
-        { icon: 'calendar-outline', label: 'Lịch sử đặt sân', onPress: () => { } },
-        { icon: 'card-outline', label: 'Lịch sử thanh toán', onPress: () => { } },
-        { icon: 'shield-checkmark-outline', label: 'Bảo mật', onPress: () => { } },
-        { icon: 'help-circle-outline', label: 'Trợ giúp', onPress: () => { } },
-    ];
 
     const toggleBiometric = async (nextValue: boolean) => {
         if (!biometricAvailable) {
@@ -109,34 +154,67 @@ export default function ProfileScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
+            <Modal visible={previewAvatarOpen} transparent animationType="fade" onRequestClose={() => setPreviewAvatarOpen(false)}>
+                <TouchableWithoutFeedback onPress={() => setPreviewAvatarOpen(false)}>
+                    <View style={{ flex: 1, backgroundColor: '#000000DD', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg }}>
+                        {previewAvatarUri ? (
+                            <Image source={{ uri: previewAvatarUri }} style={{ width: '100%', height: '70%' }} resizeMode="contain" />
+                        ) : null}
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
             <ScrollView>
-                {/* Profile Header */}
-                <View style={{ alignItems: 'center', paddingVertical: SPACING.xxl, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <Avatar uri={user?.avatar} name={user?.name || user?.email} size={72} />
-                    <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary, marginTop: SPACING.md }}>{user?.name ?? 'Người dùng'}</Text>
-                    <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: SPACING.xs }}>{user?.email}</Text>
-                </View>
-
-                {/* Dark mode toggle */}
-                <View style={{ backgroundColor: colors.surface, marginTop: SPACING.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border }}>
+                <View style={{ margin: SPACING.lg, marginBottom: 0, backgroundColor: colors.surface, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: colors.border, padding: SPACING.xl, alignItems: 'center', ...shadowStyle }}>
                     <TouchableOpacity
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: SPACING.md }}
-                        onPress={toggleTheme}
-                        activeOpacity={0.7}
+                        activeOpacity={0.85}
+                        onPress={() => previewAvatarUri ? setPreviewAvatarOpen(true) : undefined}
+                        style={{ alignItems: 'center' }}
                     >
-                        <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={colors.primary} />
+                        <View style={{ width: 104, height: 104, padding: 4, borderRadius: 52, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                            <Avatar uri={displayAvatar} name={displayName} size={90} />
                         </View>
-                        <Text style={{ flex: 1, fontSize: FONT_SIZE.md, color: colors.textPrimary, fontWeight: FONT_WEIGHT.medium }}>
-                            {isDark ? 'Chế độ sáng' : 'Chế độ tối'}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textHint} />
+                        <View style={{ marginTop: -8, backgroundColor: '#FBBF24', borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 3 }}>
+                            <Text style={{ fontSize: FONT_SIZE.xs, color: '#fff', fontWeight: FONT_WEIGHT.bold }}>MEMBER</Text>
+                        </View>
                     </TouchableOpacity>
+                    <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: colors.textPrimary, marginTop: SPACING.md }}>{displayName}</Text>
+                    <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: SPACING.xs }}>{account?.email ?? user?.email}</Text>
+                    <Text style={{ fontSize: FONT_SIZE.xs, color: colors.textHint, marginTop: SPACING.sm }}>Ảnh đại diện của bạn</Text>
+                    <View style={{ marginTop: SPACING.lg, width: '100%' }}>
+                        <Button title="Chỉnh sửa hồ sơ" icon="create-outline" fullWidth onPress={() => navigation.navigate('EditProfile')} />
+                    </View>
                 </View>
 
-                {/* Menu */}
-                <View style={{ backgroundColor: colors.surface, marginTop: SPACING.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border }}>
-                    {MENU_ITEMS.map((item, idx) => (
+                <View style={{ margin: SPACING.lg, backgroundColor: colors.surface, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: colors.border, padding: SPACING.lg, ...shadowStyle }}>
+                    <Text style={{ fontSize: FONT_SIZE.xs, color: colors.textHint, fontWeight: FONT_WEIGHT.semibold, marginBottom: SPACING.md, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Thông tin tài khoản
+                    </Text>
+                    {infoRows.map((row, index) => (
+                        <View key={row.label}>
+                            <View style={{ flexDirection: 'row', gap: SPACING.md, alignItems: 'flex-start', paddingVertical: SPACING.sm }}>
+                                <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+                                    <Ionicons name={row.icon} size={18} color={colors.primary} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginBottom: 4 }}>{row.label}</Text>
+                                    <Text style={{ fontSize: FONT_SIZE.md, color: colors.textPrimary, fontWeight: FONT_WEIGHT.medium }}>{row.value}</Text>
+                                </View>
+                                {row.copyable ? (
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => void handleCopy(row.value, row.label)} style={{ paddingTop: 4 }}>
+                                        <Ionicons name="copy-outline" size={18} color={colors.textHint} />
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                            {index < infoRows.length - 1 ? <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: SPACING.sm }} /> : null}
+                        </View>
+                    ))}
+                </View>
+
+                <View style={{ marginHorizontal: SPACING.lg, backgroundColor: colors.surface, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', ...shadowStyle }}>
+                    {[
+                        ...(isAdmin ? [{ icon: 'shield-outline', label: 'Trang quản trị', onPress: () => navigation.getParent()?.navigate('Admin' as never) }] : []),
+                        { icon: isDark ? 'sunny-outline' : 'moon-outline', label: isDark ? 'Chế độ sáng' : 'Chế độ tối', onPress: toggleTheme },
+                    ].map((item, idx) => (
                         <TouchableOpacity
                             key={idx}
                             style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: SPACING.md, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: colors.divider }}
@@ -150,18 +228,7 @@ export default function ProfileScreen() {
                             <Ionicons name="chevron-forward" size={16} color={colors.textHint} />
                         </TouchableOpacity>
                     ))}
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            paddingHorizontal: SPACING.lg,
-                            paddingVertical: SPACING.md,
-                            gap: SPACING.md,
-                            borderTopWidth: 1,
-                            borderTopColor: colors.divider,
-                            opacity: biometricBusy ? 0.6 : 1,
-                        }}
-                    >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: SPACING.md, borderTopWidth: 1, borderTopColor: colors.divider, opacity: biometricBusy ? 0.6 : 1 }}>
                         <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
                             <Ionicons name={biometricIconName} size={20} color={colors.primary} />
                         </View>
@@ -185,7 +252,6 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Logout */}
                 <TouchableOpacity
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: SPACING.xxl, gap: SPACING.sm, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: colors.danger }}
                     onPress={handleLogout}
