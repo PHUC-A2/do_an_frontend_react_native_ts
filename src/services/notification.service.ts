@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -82,7 +83,15 @@ async function ensureAndroidChannelAsync() {
     });
 }
 
+/** Expo Go Android (SDK 53+): remote FCM không còn được hỗ trợ — chỉ development/standalone build. */
+function isExpoGoAndroid(): boolean {
+    return Constants.appOwnership === 'expo' && Platform.OS === 'android';
+}
+
 async function registerBackgroundTaskAsync() {
+    if (isExpoGoAndroid()) {
+        return;
+    }
     try {
         const taskRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK);
         if (!taskRegistered) {
@@ -174,6 +183,13 @@ export const notificationService = {
 
     async registerPushTokenForCurrentUser() {
         await ensureAndroidChannelAsync();
+
+        if (isExpoGoAndroid()) {
+            console.log(
+                '[push] Bỏ qua đăng ký FCM trên Expo Go Android (SDK 53+ không hỗ trợ remote push). Chạy `npx expo run:android` hoặc EAS dev build để thử push.',
+            );
+            return null;
+        }
 
         if (!Device.isDevice) {
             console.log('[push] Bỏ qua đăng ký token trên simulator / emulator');

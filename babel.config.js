@@ -22,7 +22,7 @@ module.exports = function (api) {
                     },
                 },
             ],
-            'react-native-reanimated/plugin',
+            // react-native-reanimated/plugin: babel-preset-expo đã tự thêm khi có package — không thêm lần 2 (dễ lỗi HostFunction / runtime trên iOS).
         ],
     };
 };
