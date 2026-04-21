@@ -11,7 +11,8 @@ import { ANDROID_CHANNEL_ID } from './notification.service';
 
 type SocketEnvelope =
     | { event?: 'connected' | 'pong' | 'ring'; data?: string }
-    | { event?: 'notification'; data?: ResNotificationDTO };
+    | { event?: 'notification'; data?: ResNotificationDTO }
+    | { event?: 'pitch_reviews_updated'; data?: { pitchId?: number } };
 
 const TITLE_MAP: Partial<Record<ResNotificationDTO['type'], string>> = {
     BOOKING_CREATED: 'Đặt sân thành công',
@@ -82,7 +83,7 @@ class RealtimeService {
                     targetTab: 'MyBookings',
                     __source: 'local-ws-notification',
                 },
-            },
+            } as Notifications.NotificationContentInput,
             trigger: null,
         });
     }
@@ -96,7 +97,7 @@ class RealtimeService {
                 sound: 'default',
                 channelId: ANDROID_CHANNEL_ID,
                 data: { __source: 'local-ws-ring', targetTab: 'Notifications' },
-            },
+            } as Notifications.NotificationContentInput,
             trigger: null,
         });
     }
@@ -139,6 +140,19 @@ class RealtimeService {
     private handleMessage(raw: string) {
         try {
             const payload = JSON.parse(raw) as SocketEnvelope;
+            if (payload.event === 'pitch_reviews_updated' && payload.data && typeof payload.data === 'object') {
+                const pitchId = payload.data.pitchId;
+                if (typeof pitchId === 'number') {
+                    store.dispatch(
+                        pushRealtimeEvent({
+                            event: 'pitch_reviews_updated',
+                            pitchId,
+                            receivedAt: Date.now(),
+                        }),
+                    );
+                }
+                return;
+            }
             if (payload.event === 'notification' && payload.data && typeof payload.data !== 'string') {
                 this.handleNotification(payload.data);
                 return;

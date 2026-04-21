@@ -5,6 +5,7 @@ import {
     ReqCreatePitchDTO,
     ReqUpdatePitchDTO,
 } from '@/types/pitch.types';
+import type { ResReviewDTO } from '@/types/review.types';
 import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
 
 export const pitchService = {
@@ -13,6 +14,9 @@ export const pitchService = {
 
     getPitchById: (id: number) =>
         api.get<RestResponse<ResPitchDTO>>(ENDPOINTS.PITCHES.DETAIL(id)),
+
+    getPublicPitchReviews: (id: number) =>
+        api.get<RestResponse<ResReviewDTO[]>>(ENDPOINTS.PITCHES.PUBLIC_REVIEWS(id)),
 
     // Admin
     adminGetPitches: (params?: PaginationParams) =>

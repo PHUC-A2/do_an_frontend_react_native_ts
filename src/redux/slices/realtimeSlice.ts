@@ -3,10 +3,14 @@ import type { ResNotificationDTO } from '@/types/notification.types';
 
 export type RealtimeConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected';
 
-export type RealtimeEvent =
-    | { seq: number; event: 'notification'; notification: ResNotificationDTO; receivedAt: number }
-    | { seq: number; event: 'ring'; receivedAt: number }
-    | { seq: number; event: 'connected' | 'pong'; receivedAt: number };
+/** Payload gửi vào `pushRealtimeEvent` (không dùng `Omit<RealtimeEvent,'seq'>` trên union — TS phân phối sai). */
+export type RealtimeEventPayload =
+    | { event: 'notification'; notification: ResNotificationDTO; receivedAt: number }
+    | { event: 'ring'; receivedAt: number }
+    | { event: 'connected' | 'pong'; receivedAt: number }
+    | { event: 'pitch_reviews_updated'; pitchId: number; receivedAt: number };
+
+export type RealtimeEvent = { seq: number } & RealtimeEventPayload;
 
 interface RealtimeState {
     connectionState: RealtimeConnectionState;
@@ -25,9 +29,9 @@ const realtimeSlice = createSlice({
         setRealtimeConnectionState(state, action: PayloadAction<RealtimeConnectionState>) {
             state.connectionState = action.payload;
         },
-        pushRealtimeEvent(state, action: PayloadAction<Omit<RealtimeEvent, 'seq'>>) {
+        pushRealtimeEvent(state, action: PayloadAction<RealtimeEventPayload>) {
             const nextSeq = (state.lastEvent?.seq ?? 0) + 1;
-            state.lastEvent = { ...action.payload, seq: nextSeq } as RealtimeEvent;
+            state.lastEvent = { ...action.payload, seq: nextSeq };
         },
         clearRealtimeState(state) {
             state.connectionState = 'idle';

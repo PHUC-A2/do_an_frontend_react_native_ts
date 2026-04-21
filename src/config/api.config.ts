@@ -22,6 +22,7 @@ export const ENDPOINTS = {
         LIST: '/pitches',
         DETAIL: (id: number) => `/pitches/${id}`,
         TIMELINE: (id: number) => `/client/public/pitches/${id}/timeline`,
+        PUBLIC_REVIEWS: (id: number) => `/client/public/pitches/${id}/reviews`,
         PUBLIC: '/pitches',
     },
     // Bookings
@@ -81,12 +82,13 @@ export const ENDPOINTS = {
         DELETE: (id: number) => `/admin/equipment/${id}`,
         PUBLIC: '/public/equipment',
     },
-    // Reviews
+    // Reviews (client JWT)
     REVIEWS: {
         LIST: '/reviews',
-        MY: '/reviews/my',
-        CREATE: '/reviews',
-        DETAIL: (id: number) => `/reviews/${id}`,
+        MY: '/client/reviews/my',
+        CREATE: '/client/reviews',
+        DETAIL: (id: number) => `/client/reviews/${id}`,
+        MESSAGES: (id: number) => `/client/reviews/${id}/messages`,
     },
     // Users (admin)
     USERS: {
