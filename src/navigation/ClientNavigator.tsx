@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabHeaderProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 import { ClientTabParamList, ClientStackParamList } from './types';
-import { useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { fetchNotifications } from '@redux/slices/notificationSlice';
 import ClientTopHeader from '@components/common/ClientTopHeader';
 import ClientBottomTabBar from '@components/common/ClientBottomTabBar';
 import ClientBottomDock from '@components/common/ClientBottomDock';
@@ -47,7 +48,13 @@ function TabHeader({ options }: BottomTabHeaderProps) {
 }
 
 function ClientTabs() {
+    const dispatch = useAppDispatch();
     const unreadCount = useAppSelector((s) => s.notification.unreadCount);
+    const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+
+    useEffect(() => {
+        if (isAuthenticated) dispatch(fetchNotifications());
+    }, [isAuthenticated, dispatch]);
     return (
         <Tab.Navigator
             backBehavior="history"

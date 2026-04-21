@@ -7,6 +7,7 @@ import {
     ResCreateBookingDTO,
     ResPitchTimelineDTO,
 } from '@/types/booking.types';
+import { ResBookingEquipmentDTO, ReqUpdateBookingEquipmentStatusDTO } from '@/types/bookingEquipment.types';
 import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
 
 export const bookingService = {
@@ -20,7 +21,10 @@ export const bookingService = {
         api.get<RestResponse<ResBookingDTO>>(ENDPOINTS.BOOKINGS.DETAIL(id)),
 
     cancelBooking: (id: number) =>
-        api.post<RestResponse<ResBookingDTO>>(ENDPOINTS.BOOKINGS.CANCEL(id)),
+        api.patch<RestResponse<ResBookingDTO>>(ENDPOINTS.BOOKINGS.CANCEL(id)),
+
+    deleteBooking: (id: number) =>
+        api.delete<RestResponse<void>>(ENDPOINTS.BOOKINGS.DELETE(id)),
 
     // Admin
     getAllBookings: (params?: PaginationParams) =>
@@ -33,4 +37,17 @@ export const bookingService = {
         api.get<RestResponse<ResPitchTimelineDTO>>(ENDPOINTS.PITCHES.TIMELINE(pitchId), {
             params: { date },
         }),
+
+    // Equipment
+    getAllMyEquipments: () =>
+        api.get<RestResponse<ResBookingEquipmentDTO[]>>(ENDPOINTS.BOOKING_EQUIPMENT.MY),
+
+    getBookingEquipments: (bookingId: number) =>
+        api.get<RestResponse<ResBookingEquipmentDTO[]>>(ENDPOINTS.BOOKING_EQUIPMENT.BY_BOOKING(bookingId)),
+
+    updateEquipmentStatus: (id: number, data: ReqUpdateBookingEquipmentStatusDTO) =>
+        api.patch<RestResponse<ResBookingEquipmentDTO>>(ENDPOINTS.BOOKING_EQUIPMENT.UPDATE_STATUS(id), data),
+
+    deleteBookingEquipment: (id: number) =>
+        api.delete<RestResponse<void>>(ENDPOINTS.BOOKING_EQUIPMENT.DELETE(id)),
 };

@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { RootState } from '@redux/store';
 import { fetchPitches } from '@redux/slices/pitchSlice';
-import { fetchUnreadCount } from '@redux/slices/notificationSlice';
+import { fetchNotifications } from '@redux/slices/notificationSlice';
 import { useAuth } from '@hooks/useAuth';
 import { ClientStackParamList, ClientTabParamList } from '@navigation/types';
 import { useTheme } from '@config/ThemeContext';
@@ -57,7 +57,7 @@ export default function HomeScreen() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            dispatch(fetchUnreadCount());
+            dispatch(fetchNotifications());
         }
     }, [isAuthenticated]);
 

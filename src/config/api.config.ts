@@ -26,25 +26,32 @@ export const ENDPOINTS = {
     // Bookings
     BOOKINGS: {
         CREATE: '/bookings',
-        MY: '/bookings/my',
+        MY: '/client/bookings',
         DETAIL: (id: number) => `/bookings/${id}`,
-        CANCEL: (id: number) => `/bookings/${id}/cancel`,
-        ALL: '/admin/bookings',
-        UPDATE: (id: number) => `/admin/bookings/${id}`,
+        CANCEL: (id: number) => `/client/bookings/${id}/cancel`,
+        DELETE: (id: number) => `/client/bookings/${id}`,
+        ALL: '/bookings',
+        UPDATE: (id: number) => `/bookings/${id}`,
+    },
+    // Booking Equipment (client)
+    BOOKING_EQUIPMENT: {
+        MY: '/client/booking-equipments',
+        BY_BOOKING: (bookingId: number) => `/client/booking-equipments/booking/${bookingId}`,
+        UPDATE_STATUS: (id: number) => `/client/booking-equipments/${id}/status`,
+        DELETE: (id: number) => `/client/booking-equipments/${id}`,
     },
     // Payments
     PAYMENTS: {
-        CREATE: '/payments',
-        QR: (id: number) => `/payments/${id}/qr`,
-        CONFIRM: (id: number) => `/payments/${id}/confirm`,
-        MY: '/payments/my',
+        CREATE: '/client/payments',
+        QR: (paymentCode: string) => `/client/payments/${paymentCode}/qr`,
+        ATTACH_PROOF: (paymentId: number) => `/client/payments/${paymentId}/proof`,
+        MY: '/client/payments',
     },
     // Notifications
     NOTIFICATIONS: {
-        MY: '/notifications/my',
-        READ: (id: number) => `/notifications/${id}/read`,
-        READ_ALL: '/notifications/my/read-all',
-        UNREAD_COUNT: '/notifications/my/unread-count',
+        MY: '/client/notifications',
+        READ: (id: number) => `/client/notifications/${id}/read`,
+        READ_ALL: '/client/notifications/read-all',
     },
     // Equipment
     EQUIPMENT: {

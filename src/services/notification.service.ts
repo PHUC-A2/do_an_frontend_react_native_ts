@@ -1,20 +1,16 @@
 import api from './api';
 import { ENDPOINTS } from '@config/api.config';
 import { ResNotificationDTO } from '@/types/notification.types';
-import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
+import { RestResponse } from '@/types/common.types';
 
 export const notificationService = {
-    getMyNotifications: (params?: PaginationParams) =>
-        api.get<RestResponse<ResultPaginationDTO<ResNotificationDTO>>>(ENDPOINTS.NOTIFICATIONS.MY, {
-            params,
-        }),
+    // GET /client/notifications → trả về mảng trực tiếp (không paginate)
+    getMyNotifications: () =>
+        api.get<RestResponse<ResNotificationDTO[]>>(ENDPOINTS.NOTIFICATIONS.MY),
 
     markAsRead: (id: number) =>
-        api.patch<RestResponse<ResNotificationDTO>>(ENDPOINTS.NOTIFICATIONS.READ(id)),
+        api.patch<RestResponse<null>>(ENDPOINTS.NOTIFICATIONS.READ(id)),
 
     markAllAsRead: () =>
         api.patch<RestResponse<null>>(ENDPOINTS.NOTIFICATIONS.READ_ALL),
-
-    getUnreadCount: () =>
-        api.get<RestResponse<{ count: number }>>(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT),
 };

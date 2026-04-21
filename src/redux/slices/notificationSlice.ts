@@ -15,13 +15,8 @@ const initialState: NotificationState = {
 };
 
 export const fetchNotifications = createAsyncThunk('notification/fetchAll', async () => {
-    const res = await notificationService.getMyNotifications({ page: 1, size: 20 });
-    return res.data.data!;
-});
-
-export const fetchUnreadCount = createAsyncThunk('notification/unreadCount', async () => {
-    const res = await notificationService.getUnreadCount();
-    return res.data.data!.count;
+    const res = await notificationService.getMyNotifications();
+    return res.data.data ?? [];
 });
 
 export const markReadAsync = createAsyncThunk('notification/markRead', async (id: number) => {
@@ -52,10 +47,12 @@ const notificationSlice = createSlice({
             })
             .addCase(fetchNotifications.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.notifications = action.payload.result;
+                state.notifications = action.payload;
+                // Tính unreadCount trực tiếp từ danh sách
+                state.unreadCount = action.payload.filter((n) => !n.isRead).length;
             })
-            .addCase(fetchUnreadCount.fulfilled, (state, action) => {
-                state.unreadCount = action.payload;
+            .addCase(fetchNotifications.rejected, (state) => {
+                state.isLoading = false;
             })
             .addCase(markReadAsync.fulfilled, (state, action) => {
                 const n = state.notifications.find((n) => n.id === action.payload);

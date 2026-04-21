@@ -2,22 +2,27 @@ import api from './api';
 import { ENDPOINTS } from '@config/api.config';
 import {
     ReqCreatePaymentDTO,
-    ReqConfirmPaymentDTO,
+    ResCreatePaymentDTO,
     ResPaymentDTO,
     ResPaymentQRDTO,
 } from '@/types/payment.types';
-import { RestResponse, ResultPaginationDTO, PaginationParams } from '@/types/common.types';
+import { RestResponse } from '@/types/common.types';
 
 export const paymentService = {
     createPayment: (data: ReqCreatePaymentDTO) =>
-        api.post<RestResponse<ResPaymentDTO>>(ENDPOINTS.PAYMENTS.CREATE, data),
+        api.post<RestResponse<ResCreatePaymentDTO>>(ENDPOINTS.PAYMENTS.CREATE, data),
 
-    getPaymentQR: (id: number) =>
-        api.get<RestResponse<ResPaymentQRDTO>>(ENDPOINTS.PAYMENTS.QR(id)),
+    getPaymentQR: (paymentCode: string) =>
+        api.get<RestResponse<ResPaymentQRDTO>>(ENDPOINTS.PAYMENTS.QR(paymentCode)),
 
-    confirmPayment: (id: number, data: ReqConfirmPaymentDTO) =>
-        api.post<RestResponse<ResPaymentDTO>>(ENDPOINTS.PAYMENTS.CONFIRM(id), data),
+    attachProof: (paymentId: number, proofUrl: string) =>
+        api.patch<RestResponse<null>>(ENDPOINTS.PAYMENTS.ATTACH_PROOF(paymentId), { proofUrl }),
 
-    getMyPayments: (params?: PaginationParams) =>
-        api.get<RestResponse<ResultPaginationDTO<ResPaymentDTO>>>(ENDPOINTS.PAYMENTS.MY, { params }),
+    uploadProofImage: (formData: FormData) =>
+        api.post<RestResponse<{ url: string }>>('/client/payments/upload-proof', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
+
+    getMyPayments: () =>
+        api.get<RestResponse<ResPaymentDTO[]>>(ENDPOINTS.PAYMENTS.MY),
 };

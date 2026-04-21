@@ -27,7 +27,7 @@ export type ClientStackParamList = {
     BookingTimeline: { pitchId: number };
     CreateBooking: { pitchId: number; startTime: string; endTime: string };
     BookingDetail: { bookingId: number };
-    PaymentQR: { paymentId: number };
+    PaymentQR: { bookingId: number };
     ReviewCreate: { targetType: 'PITCH' | 'EQUIPMENT'; targetId: number; targetName: string };
     EditProfile: undefined;
     AuthModal: NavigatorScreenParams<AuthStackParamList> | undefined;

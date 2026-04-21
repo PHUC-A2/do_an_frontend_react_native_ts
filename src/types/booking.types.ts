@@ -1,6 +1,8 @@
 export type BookingStatus =
     | 'PENDING'
+    | 'ACTIVE'
     | 'CONFIRMED'
+    | 'PAID'
     | 'CHECKIN'
     | 'COMPLETED'
     | 'CANCELLED'
@@ -22,14 +24,18 @@ export interface ResBookingDTO {
     id: number;
     pitchId: number;
     pitchName: string;
-    pitchImage: string | null;
+    pitchImage?: string | null;
     userId: number;
     userName: string;
-    startTime: string;
-    endTime: string;
+    /** ISO datetime — trường từ /client/bookings */
+    startDateTime: string;
+    endDateTime: string;
     totalPrice: number;
     status: BookingStatus;
-    note: string | null;
+    note?: string | null;
+    contactPhone?: string | null;
+    durationMinutes?: number;
+    deletedByUser?: boolean;
     createdAt: string;
     updatedAt: string;
 }

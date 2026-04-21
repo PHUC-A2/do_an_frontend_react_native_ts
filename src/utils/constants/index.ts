@@ -5,7 +5,9 @@ import { ENV } from '@config/env';
 
 export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
     PENDING: 'Chờ xác nhận',
+    ACTIVE: 'Đã xác nhận',
     CONFIRMED: 'Đã xác nhận',
+    PAID: 'Đã thanh toán',
     CHECKIN: 'Đang diễn ra',
     COMPLETED: 'Hoàn thành',
     CANCELLED: 'Đã hủy',
