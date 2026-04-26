@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from '@config/theme';
-import { IMAGE_BASE_URL, PITCH_STATUS_LABEL, PITCH_TYPE_LABEL } from '@utils/constants';
+import { getPitchTypeLabel, IMAGE_BASE_URL, PITCH_STATUS_LABEL } from '@utils/constants';
 import { ResPitchEquipmentDTO } from '@/types/pitchEquipment.types';
 import { ResPitchDTO } from '@/types/pitch.types';
 import { ResPitchTimelineSlotDTO, SlotStatus } from '@/types/booking.types';
@@ -599,7 +599,7 @@ export function PitchSummaryCard({
                 {pitch ? (
                     <View style={{ flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap', marginBottom: SPACING.md }}>
                         <View style={{ backgroundColor: colors.primaryLight, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 3 }}>
-                            <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: colors.primary }}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                            <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: colors.primary }}>{getPitchTypeLabel(pitch.pitchTypeName)}</Text>
                         </View>
                         <View style={{ borderWidth: 1, borderColor: pitch.status === 'ACTIVE' ? '#4ADE80' : '#F87171', borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 3 }}>
                             <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: pitch.status === 'ACTIVE' ? '#4ADE80' : '#F87171' }}>{PITCH_STATUS_LABEL[pitch.status]}</Text>

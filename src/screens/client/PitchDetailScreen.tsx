@@ -27,7 +27,7 @@ import Button from '@components/common/Button';
 import { useTheme } from '@config/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS, SHADOW } from '@config/theme';
-import { PITCH_TYPE_LABEL, PITCH_STATUS_LABEL, IMAGE_BASE_URL } from '@utils/constants';
+import { getPitchTypeLabel, PITCH_STATUS_LABEL, IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
 import { pitchService } from '@services/pitch.service';
 import { reviewService } from '@services/review.service';
@@ -313,7 +313,7 @@ export default function PitchDetailScreen({ route, navigation }: Props) {
                     <View style={styles.titleRow}>
                         <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={2}>{pitch.name}</Text>
                         <View style={[styles.typeBadge, { backgroundColor: colors.primaryLight }]}>
-                            <Text style={[styles.typeText, { color: colors.primary }]}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                            <Text style={[styles.typeText, { color: colors.primary }]}>{getPitchTypeLabel(pitch.pitchTypeName)}</Text>
                         </View>
                     </View>
 

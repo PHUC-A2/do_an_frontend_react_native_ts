@@ -28,7 +28,7 @@ import { useTheme } from '@config/ThemeContext';
 import type { AppColors } from '@config/ThemeContext';
 import { FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS, SHADOW } from '@config/theme';
 import { ResPitchDTO } from '@/types/pitch.types';
-import { PITCH_TYPE_LABEL, IMAGE_BASE_URL } from '@utils/constants';
+import { getPitchTypeLabel, IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
 import { CLIENT_BACK_TO_TOP_VISIBILITY_EVENT, CLIENT_SCROLL_TO_TOP_EVENT } from '@components/common/chat/chat.constants';
 
@@ -248,7 +248,7 @@ const PitchGridCard = memo(function PitchGridCard({ pitch, index, colors, onPres
                         từ {formatVND(minPrice)}/giờ
                     </Text>
                 )}
-                <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, marginTop: 4 }}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, marginTop: 4 }}>{getPitchTypeLabel(pitch.pitchTypeName)}</Text>
             </View>
         </TouchableOpacity>
     );

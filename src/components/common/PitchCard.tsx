@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@config/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING, SHADOW } from '@config/theme';
 import { ResPitchDTO, PitchStatus } from '@/types/pitch.types';
-import { PITCH_TYPE_LABEL, PITCH_STATUS_LABEL, IMAGE_BASE_URL } from '@utils/constants';
+import { getPitchTypeLabel, PITCH_STATUS_LABEL, IMAGE_BASE_URL } from '@utils/constants';
 import { formatVND } from '@utils/format/currency';
 
 interface PitchCardProps {
@@ -154,7 +154,7 @@ export default function PitchCard({ item, index, onPress, onBook }: PitchCardPro
                         >
                             <Ionicons name="football-outline" size={12} color={colors.primary} />
                             <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, fontWeight: FONT_WEIGHT.semibold }}>
-                                {PITCH_TYPE_LABEL[item.pitchType]}
+                                {getPitchTypeLabel(item.pitchTypeName)}
                             </Text>
                         </View>
 

@@ -1,5 +1,9 @@
 export type PitchStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
-export type PitchType = 'THREE' | 'FIVE' | 'SEVEN' | 'ELEVEN';
+export interface PitchTypeLookup {
+    id: number;
+    name: string;
+    code?: string | null;
+}
 
 export interface ResPitchHourlyPriceDTO {
     startTime: string;
@@ -15,7 +19,8 @@ export interface ResPitchDTO {
     pitchUrl: string | null;    // frontend field name (may come as imageUrl from backend)
     imageUrl?: string | null;   // backend DTO field name alias
     status: PitchStatus;
-    pitchType: PitchType;
+    pitchTypeId: number | null;
+    pitchTypeName?: string | null;
     openTime: string | null;
     closeTime: string | null;
     open24h: boolean;
@@ -32,7 +37,7 @@ export interface ReqCreatePitchDTO {
     name: string;
     description?: string;
     address: string;
-    type: PitchType;
+    pitchTypeId: number;
     openTime: string;
     closeTime: string;
     images?: string[];
