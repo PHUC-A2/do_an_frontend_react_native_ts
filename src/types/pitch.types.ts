@@ -16,6 +16,8 @@ export interface ResPitchDTO {
     imageUrl?: string | null;   // backend DTO field name alias
     status: PitchStatus;
     pitchType: PitchType;
+    pitchTypeId: number;
+    pitchTypeName: string;
     openTime: string | null;
     closeTime: string | null;
     open24h: boolean;

@@ -185,7 +185,7 @@ export default function PitchDetailScreen({ route, navigation }: Props) {
                 .then((r) => {
                     if (!cancelled) setChatMessages(r.data.data ?? []);
                 })
-                .catch(() => {});
+                .catch(() => { });
         };
 
         syncMessages();
@@ -313,7 +313,7 @@ export default function PitchDetailScreen({ route, navigation }: Props) {
                     <View style={styles.titleRow}>
                         <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={2}>{pitch.name}</Text>
                         <View style={[styles.typeBadge, { backgroundColor: colors.primaryLight }]}>
-                            <Text style={[styles.typeText, { color: colors.primary }]}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                            <Text style={[styles.typeText, { color: colors.primary }]}>{pitch.pitchTypeName || PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
                         </View>
                     </View>
 

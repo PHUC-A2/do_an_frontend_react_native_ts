@@ -154,7 +154,7 @@ export default function PitchCard({ item, index, onPress, onBook }: PitchCardPro
                         >
                             <Ionicons name="football-outline" size={12} color={colors.primary} />
                             <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, fontWeight: FONT_WEIGHT.semibold }}>
-                                {PITCH_TYPE_LABEL[item.pitchType]}
+                                {item.pitchTypeName || PITCH_TYPE_LABEL[item.pitchType]}
                             </Text>
                         </View>
 

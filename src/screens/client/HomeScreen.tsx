@@ -248,7 +248,7 @@ const PitchGridCard = memo(function PitchGridCard({ pitch, index, colors, onPres
                         từ {formatVND(minPrice)}/giờ
                     </Text>
                 )}
-                <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, marginTop: 4 }}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                <Text style={{ fontSize: FONT_SIZE.xs, color: colors.primary, marginTop: 4 }}>{pitch.pitchTypeName || PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
             </View>
         </TouchableOpacity>
     );

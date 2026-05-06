@@ -204,7 +204,7 @@ export function TimePickerModal({
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={{ flex: 1, backgroundColor: '#00000088' }}>
-                    <TouchableWithoutFeedback onPress={() => {}}>
+                    <TouchableWithoutFeedback onPress={() => { }}>
                         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
                             <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
                                 <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
@@ -312,7 +312,7 @@ export function DatePickerModal({
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={{ flex: 1, backgroundColor: '#00000088', justifyContent: 'center', paddingHorizontal: SPACING.lg }}>
-                    <TouchableWithoutFeedback onPress={() => {}}>
+                    <TouchableWithoutFeedback onPress={() => { }}>
                         <View style={{ backgroundColor: colors.surface, borderRadius: BORDER_RADIUS.lg, padding: SPACING.lg }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md }}>
                                 <TouchableOpacity onPress={prevMonth} style={{ padding: SPACING.sm }}>
@@ -599,7 +599,7 @@ export function PitchSummaryCard({
                 {pitch ? (
                     <View style={{ flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap', marginBottom: SPACING.md }}>
                         <View style={{ backgroundColor: colors.primaryLight, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 3 }}>
-                            <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: colors.primary }}>{PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
+                            <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: colors.primary }}>{pitch.pitchTypeName || PITCH_TYPE_LABEL[pitch.pitchType]}</Text>
                         </View>
                         <View style={{ borderWidth: 1, borderColor: pitch.status === 'ACTIVE' ? '#4ADE80' : '#F87171', borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 3 }}>
                             <Text style={{ fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.semibold, color: pitch.status === 'ACTIVE' ? '#4ADE80' : '#F87171' }}>{PITCH_STATUS_LABEL[pitch.status]}</Text>
