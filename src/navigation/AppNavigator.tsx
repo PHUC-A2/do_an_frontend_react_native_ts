@@ -8,8 +8,6 @@ import { fetchAccount } from '@redux/slices/accountSlice';
 import { RootStackParamList } from './types';
 import { navigationRef } from './navigationRef';
 import { COLORS } from '@config/theme';
-import BiometricGateOverlay from '@components/auth/BiometricGateOverlay';
-
 import ClientNavigator from './ClientNavigator';
 import AdminNavigator from './AdminNavigator';
 
@@ -17,7 +15,7 @@ const Root = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
     const dispatch = useAppDispatch();
-    const { isAuthenticated, isHydrated, pendingBiometricUnlock } = useAppSelector((s) => s.auth);
+    const { isAuthenticated, isHydrated } = useAppSelector((s) => s.auth);
     const account = useAppSelector((s) => s.account.account);
 
     useEffect(() => {
@@ -36,10 +34,6 @@ export default function AppNavigator() {
                 <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
         );
-    }
-
-    if (pendingBiometricUnlock) {
-        return <BiometricGateOverlay />;
     }
 
     const isAdmin = (account?.roles ?? []).some((role) => role.name === 'ADMIN');

@@ -1,12 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Switch, Platform, DeviceEventEmitter, Modal, Image, TouchableWithoutFeedback } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, Image, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@hooks/useAuth';
-import { BIOMETRIC_STATUS_CHANGED_EVENT, useBiometric } from '@hooks/useBiometric';
-import { biometricService } from '@services/BiometricService';
 import { fetchAccount } from '@redux/slices/accountSlice';
 import Avatar from '@components/common/Avatar';
 import Button from '@components/common/Button';
@@ -23,50 +21,19 @@ type Nav = NativeStackNavigationProp<ClientStackParamList>;
 
 export default function ProfileScreen() {
     const { user, logout, isAuthenticated, isAdmin } = useAuth();
-    const { handleEnableBiometric, handleDisableBiometric, getBiometricEnabled } = useBiometric();
     const navigation = useNavigation<Nav>();
     const toast = useToast();
     const { colors, isDark, toggleTheme } = useTheme();
     const dispatch = useAppDispatch();
     const account = useAppSelector((state) => state.account.account);
-    const biometricLabel = Platform.OS === 'ios' ? 'Face ID' : 'vân tay';
-    const biometricIconName = Platform.OS === 'ios' ? 'scan-outline' : 'finger-print-outline';
-    const [biometricEnabled, setBiometricEnabled] = useState(false);
-    const [biometricAvailable, setBiometricAvailable] = useState(false);
-    const [biometricBusy, setBiometricBusy] = useState(false);
     const [previewAvatarOpen, setPreviewAvatarOpen] = useState(false);
-
-    const loadBiometricState = useCallback(async () => {
-        if (!isAuthenticated) return;
-        const [enabled, canOffer] = await Promise.all([
-            getBiometricEnabled(),
-            biometricService.canOfferBiometricLogin(),
-        ]);
-        setBiometricEnabled(enabled);
-        setBiometricAvailable(canOffer);
-    }, [isAuthenticated, getBiometricEnabled]);
 
     useFocusEffect(
         useCallback(() => {
             void dispatch(fetchAccount());
-            void loadBiometricState();
             return undefined;
-        }, [dispatch, loadBiometricState]),
+        }, [dispatch]),
     );
-
-    useEffect(() => {
-        const subscription = DeviceEventEmitter.addListener(
-            BIOMETRIC_STATUS_CHANGED_EVENT,
-            (payload?: { enabled?: boolean }) => {
-                if (typeof payload?.enabled === 'boolean') {
-                    setBiometricEnabled(payload.enabled);
-                } else {
-                    void loadBiometricState();
-                }
-            },
-        );
-        return () => subscription.remove();
-    }, [loadBiometricState]);
 
     const shadowStyle = isDark ? {} : SHADOW.sm;
     const displayName = account?.fullName?.trim() || account?.name || user?.name || 'Người dùng';
@@ -129,28 +96,6 @@ export default function ProfileScreen() {
         ]);
     };
 
-    const toggleBiometric = async (nextValue: boolean) => {
-        if (!biometricAvailable) {
-            toast.error(`Thiết bị chưa sẵn sàng ${biometricLabel}.`);
-            return;
-        }
-        setBiometricBusy(true);
-        try {
-            if (nextValue) {
-                await handleEnableBiometric();
-                setBiometricEnabled(true);
-                toast.success(`Đã bật đăng nhập bằng ${biometricLabel}`);
-            } else {
-                await handleDisableBiometric();
-                setBiometricEnabled(false);
-                toast.success(`Đã tắt đăng nhập bằng ${biometricLabel}`);
-            }
-        } catch (err: any) {
-            toast.error(err?.message ?? `Không thể cập nhật ${biometricLabel}`);
-        } finally {
-            setBiometricBusy(false);
-        }
-    };
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
@@ -228,28 +173,6 @@ export default function ProfileScreen() {
                             <Ionicons name="chevron-forward" size={16} color={colors.textHint} />
                         </TouchableOpacity>
                     ))}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: SPACING.md, borderTopWidth: 1, borderTopColor: colors.divider, opacity: biometricBusy ? 0.6 : 1 }}>
-                        <View style={{ width: 36, height: 36, borderRadius: BORDER_RADIUS.sm, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name={biometricIconName} size={20} color={colors.primary} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: FONT_SIZE.md, color: colors.textPrimary, fontWeight: FONT_WEIGHT.medium }}>
-                                Đăng nhập bằng {biometricLabel}
-                            </Text>
-                            <Text style={{ fontSize: FONT_SIZE.sm, color: colors.textSecondary, marginTop: 2 }}>
-                                Bật/tắt {biometricLabel} cho đăng nhập nhanh
-                            </Text>
-                        </View>
-                        <Switch
-                            value={biometricEnabled}
-                            disabled={biometricBusy || !biometricAvailable}
-                            onValueChange={(next) => {
-                                void toggleBiometric(next);
-                            }}
-                            thumbColor={biometricEnabled ? '#fff' : colors.textHint}
-                            trackColor={{ false: colors.border, true: colors.primary }}
-                        />
-                    </View>
                 </View>
 
                 <TouchableOpacity

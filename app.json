@@ -17,7 +17,6 @@
       "bundleIdentifier": "com.phuc.tbusport",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn.",
         "UIBackgroundModes": [
           "remote-notification"
         ]
@@ -41,12 +40,6 @@
       "expo-secure-store",
       "expo-font",
       "expo-localization",
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "TUB Sport dùng Face ID để đăng nhập nhanh và an toàn hơn."
-        }
-      ],
       "expo-notifications"
     ]
   }
