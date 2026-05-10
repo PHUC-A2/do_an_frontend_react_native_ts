@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -19,9 +19,13 @@ import { useTheme } from '@config/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from '@config/theme';
 import { bookingService } from '@services/booking.service';
 import { pitchService } from '@services/pitch.service';
-import { useAppDispatch } from '@redux/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
 import { fetchNotifications } from '@redux/slices/notificationSlice';
+import { hardLogoutAsync } from '@redux/slices/authSlice';
+import { saveBookingDraft, clearBookingDraft } from '@redux/slices/bookingDraftSlice';
+import { useAuth } from '@hooks/useAuth';
+import { useToast } from '@hooks/useToast';
 import { ResPitchDTO } from '@/types/pitch.types';
 import { ResPitchEquipmentDTO } from '@/types/pitchEquipment.types';
 import { formatVND } from '@utils/format/currency';
@@ -46,6 +50,10 @@ export default function CreateBookingScreen({ route, navigation }: Props) {
     const { pitchId, startTime, endTime } = route.params;
     const { colors } = useTheme();
     const dispatch = useAppDispatch();
+    const { isAuthenticated } = useAuth();
+    const { info } = useToast();
+    const draft = useAppSelector((s) => s.bookingDraft.draft);
+    const draftRestoredRef = useRef(false);
 
     const [pitch, setPitch] = useState<ResPitchDTO | null>(null);
     const [pitchEquipments, setPitchEquipments] = useState<ResPitchEquipmentDTO[]>([]);
@@ -85,16 +93,53 @@ export default function CreateBookingScreen({ route, navigation }: Props) {
     }, [pitchId]);
 
     useEffect(() => {
-        const nextOn: Record<number, boolean> = {};
-        const nextQty: Record<number, number> = {};
-        for (const item of borrowableEquipments) {
-            nextOn[item.id] = false;
-            nextQty[item.id] = 0;
+        if (fetchingData) return;
+
+        const shouldRestoreDraft = !!(
+            draft &&
+            !draftRestoredRef.current &&
+            isAuthenticated &&
+            draft.pitchId === pitchId &&
+            draft.startTime === startTime &&
+            draft.endTime === endTime
+        );
+
+        if (shouldRestoreDraft) {
+            setPhone(draft?.phone ?? '');
+            setBorrowNote(draft?.borrowNote ?? '');
+            setBorrowConditionAcknowledged(draft?.borrowConditionAcknowledged ?? false);
+            setBorrowReportPrintOptIn(draft?.borrowReportPrintOptIn ?? false);
         }
-        setRowOn(nextOn);
-        setQuantities(nextQty);
-        setRowNotes({});
-    }, [borrowableEquipments]);
+
+        setRowOn((prev) => {
+            const nextOn: Record<number, boolean> = {};
+            for (const item of borrowableEquipments) {
+                nextOn[item.id] = shouldRestoreDraft ? (draft?.rowOn?.[item.id] ?? false) : (prev[item.id] ?? false);
+            }
+            return nextOn;
+        });
+        setQuantities((prev) => {
+            const nextQty: Record<number, number> = {};
+            for (const item of borrowableEquipments) {
+                const restoredQty = draft?.quantities?.[item.id];
+                nextQty[item.id] = shouldRestoreDraft
+                    ? (restoredQty && restoredQty > 0 ? restoredQty : 0)
+                    : (prev[item.id] ?? 0);
+            }
+            return nextQty;
+        });
+        setRowNotes((prev) => {
+            const nextNotes: Record<number, string> = {};
+            for (const item of borrowableEquipments) {
+                nextNotes[item.id] = shouldRestoreDraft ? (draft?.rowNotes?.[item.id] ?? '') : (prev[item.id] ?? '');
+            }
+            return nextNotes;
+        });
+
+        if (shouldRestoreDraft) {
+            draftRestoredRef.current = true;
+        }
+    }, [borrowableEquipments, draft, fetchingData, isAuthenticated, pitchId, startTime, endTime]);
 
     const pitchImageUri = useMemo(
         () => normalizeImageUri(pitch?.pitchUrl ?? pitch?.imageUrl ?? null),
@@ -150,6 +195,24 @@ export default function CreateBookingScreen({ route, navigation }: Props) {
     );
 
     const handleBook = useCallback(async () => {
+        if (!isAuthenticated) {
+            info('Vui lòng đăng nhập để đặt sân');
+            dispatch(saveBookingDraft({
+                pitchId,
+                startTime,
+                endTime,
+                phone: phone.trim() || undefined,
+                borrowNote,
+                borrowConditionAcknowledged,
+                borrowReportPrintOptIn,
+                rowOn,
+                quantities,
+                rowNotes,
+            }));
+            navigation.navigate('AuthModal', { screen: 'Login' });
+            return;
+        }
+
         if (durationMinutes(startTime, endTime) < 30) {
             Alert.alert('Không hợp lệ', 'Thời lượng đặt sân tối thiểu là 30 phút.');
             return;
@@ -185,6 +248,7 @@ export default function CreateBookingScreen({ route, navigation }: Props) {
                 );
             }
 
+            dispatch(clearBookingDraft());
             await Promise.all([
                 dispatch(fetchMyBookings(undefined)),
                 dispatch(fetchNotifications()),
@@ -197,11 +261,30 @@ export default function CreateBookingScreen({ route, navigation }: Props) {
                 },
             ]);
         } catch (err: any) {
+            const status = err?.response?.status;
+            if (status === 401 || status === 403) {
+                dispatch(saveBookingDraft({
+                    pitchId,
+                    startTime,
+                    endTime,
+                    phone: phone.trim() || undefined,
+                    borrowNote,
+                    borrowConditionAcknowledged,
+                    borrowReportPrintOptIn,
+                    rowOn,
+                    quantities,
+                    rowNotes,
+                }));
+                await dispatch(hardLogoutAsync());
+                info('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
+                navigation.navigate('AuthModal', { screen: 'Login' });
+                return;
+            }
             Alert.alert('Đặt sân thất bại', err?.response?.data?.message ?? 'Đã xảy ra lỗi, vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
-    }, [pitchId, startTime, endTime, phone, borrowLines, borrowConditionAcknowledged, borrowReportPrintOptIn, dispatch, navigation]);
+    }, [pitchId, startTime, endTime, phone, borrowLines, borrowConditionAcknowledged, borrowReportPrintOptIn, dispatch, navigation, isAuthenticated, info, borrowNote, rowOn, quantities, rowNotes]);
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>

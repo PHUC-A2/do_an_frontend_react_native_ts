@@ -10,11 +10,13 @@ import Toast from 'react-native-toast-message';
 import { store } from '@redux/store';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { fetchNotifications } from '@redux/slices/notificationSlice';
+import { forceLogout } from '@redux/slices/authSlice';
 import AppNavigator from '@navigation/AppNavigator';
 import { navigateFromNotificationPayload } from '@navigation/navigationRef';
 import { ThemeProvider, useTheme } from '@config/ThemeContext';
 import { notificationService } from '@services/notification.service';
 import { realtimeService } from '@services/realtime.service';
+import { setUnauthorizedHandler } from '@services/sessionEvents';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +36,15 @@ function AppContent() {
   useEffect(() => {
     authRef.current = isAuthenticated;
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      dispatch(forceLogout());
+    });
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     let cleanup: (() => void) | null = null;

@@ -42,6 +42,13 @@ class RealtimeService {
     private manuallyStopped = false;
 
     private buildSocketUrl(token: string) {
+        // ⚠️ SECURITY NOTE: Token is passed as query parameter because WebSocket API
+        // doesn't support custom headers in the browser. This is a known limitation.
+        // Mitigations in place:
+        // - Always use WSS (secure WebSocket) in production
+        // - Backend validates token signature, not just presence
+        // - Tokens for WebSocket should have short expiration
+        // - Server logs should not expose query parameters
         const httpUrl = new URL(API_BASE_URL);
         const protocol = httpUrl.protocol === 'https:' ? 'wss:' : 'ws:';
         const basePath = httpUrl.pathname.replace(/\/api\/v1\/?$/, '');
@@ -181,6 +188,7 @@ class RealtimeService {
     }
 
     async start() {
+        // Validate token exists and user is authenticated
         const token = await storage.getAccessToken();
         if (!token) {
             this.stop();
@@ -188,6 +196,13 @@ class RealtimeService {
         }
 
         if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
+        // Check auth state before connecting
+        const authState = store.getState().auth;
+        if (!authState.isAuthenticated) {
+            this.stop();
             return;
         }
 

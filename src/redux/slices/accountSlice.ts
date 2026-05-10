@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '@services/auth.service';
 import type { ResAccountDTO } from '@/types/user.types';
-import { hardLogoutAsync, logoutAsync } from './authSlice';
+import { forceLogout, hardLogoutAsync, logoutAsync } from './authSlice';
 
 interface AccountState {
     account: ResAccountDTO | null;
@@ -91,6 +91,11 @@ const accountSlice = createSlice({
                 state.error = null;
             })
             .addCase(hardLogoutAsync.fulfilled, (state) => {
+                state.account = null;
+                state.loading = false;
+                state.error = null;
+            })
+            .addCase(forceLogout, (state) => {
                 state.account = null;
                 state.loading = false;
                 state.error = null;

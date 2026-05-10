@@ -22,6 +22,8 @@ import { pitchService } from '@services/pitch.service';
 import { useAppDispatch } from '@redux/hooks';
 import { fetchMyBookings } from '@redux/slices/bookingSlice';
 import { fetchNotifications } from '@redux/slices/notificationSlice';
+import { useAuth } from '@hooks/useAuth';
+import { useToast } from '@hooks/useToast';
 import { ResPitchDTO } from '@/types/pitch.types';
 import { ResPitchEquipmentDTO } from '@/types/pitchEquipment.types';
 import { formatVND } from '@utils/format/currency';
@@ -62,6 +64,8 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
     const { pitchId } = route.params;
     const { colors } = useTheme();
     const dispatch = useAppDispatch();
+    const { isAuthenticated } = useAuth();
+    const { info } = useToast();
 
     const defaults = useMemo(() => getDefaultBookingTimes(), []);
     const today = useMemo(() => {
@@ -232,6 +236,11 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
     );
 
     const handleBook = useCallback(async () => {
+        if (!isAuthenticated) {
+            info('Vui lòng đăng nhập để đặt sân');
+            navigation.navigate('AuthModal', { screen: 'Login' });
+            return;
+        }
         if (durMins <= 0) {
             Alert.alert('Lỗi', 'Giờ kết thúc phải sau giờ bắt đầu.');
             return;
@@ -284,7 +293,7 @@ export default function BookingTimelineScreen({ route, navigation }: Props) {
         } finally {
             setSubmitting(false);
         }
-    }, [borrowConditionAcknowledged, borrowLines, borrowReportPrintOptIn, dispatch, durMins, endISO, navigation, phone, pitchId, startISO]);
+    }, [borrowConditionAcknowledged, borrowLines, borrowReportPrintOptIn, dispatch, durMins, endISO, info, isAuthenticated, navigation, phone, pitchId, startISO]);
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>

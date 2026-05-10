@@ -51,17 +51,27 @@ export const loginAsync = createAsyncThunk(
     },
 );
 
-export const logoutAsync = createAsyncThunk('auth/logout', async () => {
-    // Đăng xuất kiểu "khóa app": giữ token + cờ sinh trắc học để lần sau mở khóa nhanh.
+export const logoutAsync = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
+    try {
+        await authService.logout();
+    } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        console.log('[auth][logout] remote logout failed:', error.response?.data?.message ?? error.message);
+    } finally {
+        await storage.clearAll();
+    }
     return true;
 });
 
 export const hardLogoutAsync = createAsyncThunk('auth/hardLogout', async () => {
     try {
         await authService.logout();
+    } catch (error) {
+        console.log('[auth][hardLogout] remote logout failed:', error);
     } finally {
         await storage.clearAll();
     }
+    return true;
 });
 
 // ---- Slice ----
@@ -71,6 +81,12 @@ const authSlice = createSlice({
     initialState,
     reducers: {
         clearError(state) {
+            state.error = null;
+        },
+        forceLogout(state) {
+            state.user = null;
+            state.isAuthenticated = false;
+            state.isLoading = false;
             state.error = null;
         },
         setUser(state, action: PayloadAction<JwtUserDTO>) {
@@ -87,11 +103,14 @@ const authSlice = createSlice({
                 state.user = action.payload.user;
                 state.isAuthenticated = true;
             } else {
+                state.user = null;
                 state.isAuthenticated = false;
             }
         });
         builder.addCase(hydrateAuth.rejected, (state) => {
             state.isHydrated = true;
+            state.user = null;
+            state.isAuthenticated = false;
         });
 
         // Login
@@ -122,5 +141,5 @@ const authSlice = createSlice({
     },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, forceLogout } = authSlice.actions;
 export default authSlice.reducer;
